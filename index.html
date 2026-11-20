@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Вольт Вольт — Станция зарядки</title>
+
+  <!-- Шрифты Inter и JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MQTT.js для подключения к HiveMQ по WebSocket -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            vv: {
+              bg: '#0f1513',
+              card: '#17201d',
+              elevated: '#1d2824',
+              border: '#23302b',
+              text: '#f1f5f3',
+              muted: '#8fa39b',
+              lime: '#c8e68c',
+              limeHover: '#b8da78',
+              free: '#4ade80',
+              charging: '#fbbf24',
+              charged: '#38bdf8',
+              danger: '#f87171',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    button:focus,
+    button:focus-visible {
+      outline: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #090d0b;
+      color: #f1f5f3;
+      font-family: 'Inter', sans-serif;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Мобильный PWA-корпус на десктопе и полноэкранный режим на телефоне */
+    #app-shell {
+      width: 100%;
+      max-width: 100%;
+      height: 100dvh;
+      margin: 0 auto;
+      background-color: #0f1513;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: max-width 0.25s ease, height 0.25s ease;
+    }
+
+    @media (min-width: 640px) {
+      #app-shell {
+        max-width: 412px;
+        height: min(820px, calc(100dvh - 32px));
+        border-radius: 28px;
+        border: 1px solid #23302b;
+        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85);
+      }
+    }
+
+    /* Режим разворота на широкий экран ПК */
+    #app-shell.is-expanded {
+      max-width: 1040px;
+    }
+
+    #app-shell.is-expanded #cells-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    /* Скрытие полос прокрутки в контейнере контента */
+    .app-scroll::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .app-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .app-scroll::-webkit-scrollbar-thumb {
+      background: #23302b;
+      border-radius: 999px;
+    }
+
+    /* Анимация выезда нижней шторки (Bottom Sheet) */
+    @keyframes sheetUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0.6;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .animate-sheet-up {
+      animation: sheetUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .pb-safe {
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+  </style>
+</head>
+<body>
+  <div id="app-shell">
+    <!-- =================================================================== -->
+    <!-- ВЕРХНЯЯ ШАПКА ПРИЛОЖЕНИЯ                                            -->
+    <!-- =================================================================== -->
+    <header class="shrink-0 bg-vv-card/95 backdrop-blur-md border-b border-vv-border px-4 py-3 flex items-center justify-between gap-2 z-20">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-vv-lime text-vv-bg flex items-center justify-center shrink-0 shadow-md shadow-vv-lime/15">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-base font-extrabold tracking-tight text-vv-text truncate">Вольт Вольт</h1>
+          </div>
+          <p class="text-[11px] text-vv-muted truncate">Станция зарядки</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Кнопка разворота на широкий экран (видна на ПК) -->
+        <button
+          onclick="toggleExpandView()"
+          class="hidden sm:flex p-2 rounded-xl bg-vv-bg border border-vv-border text-vv-muted hover:text-vv-text transition"
+          title="Развернуть / Свернуть"
+        >
+          <svg id="expand-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
+
+        <!-- Быстрый переход в кабинет -->
+        <button
+          id="header-user-badge"
+          onclick="switchTab('cabinet')"
+          class="w-8 h-8 rounded-full bg-vv-bg border border-vv-border hover:border-vv-lime/50 flex items-center justify-center text-xs font-bold text-vv-muted transition"
+          title="Личный кабинет"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- =================================================================== -->
+    <!-- ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ (TOAST)                                     -->
+    <!-- =================================================================== -->
+    <div id="toast-container" class="pointer-events-none absolute top-16 left-3 right-3 z-50 flex flex-col gap-2"></div>
+
+    <!-- =================================================================== -->
+    <!-- ОСНОВНОЙ СКРОЛЛИРУЕМЫЙ КОНТЕНТ ВКЛАДОК                              -->
+    <!-- =================================================================== -->
+    <main class="flex-1 overflow-y-auto app-scroll px-3.5 pt-3 pb-4">
+      <!-- ================================================================= -->
+      <!-- ВКЛАДКА 1: ЯЧЕЙКИ СТАНЦИИ                                         -->
+      <!-- ================================================================= -->
+      <section id="tab-cells" class="space-y-3">
+        <!-- Компактная сводка -->
+        <div class="bg-vv-card border border-vv-border rounded-2xl p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-medium text-vv-muted">Состояние ячеек</span>
+            <span id="summary-free-ratio" class="text-xs font-extrabold text-vv-free">40 / 50 свободно</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
+              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">40</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Свободно</div>
+            </div>
+            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
+              <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">7</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
+            </div>
+            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
+              <div id="stat-charged" class="text-base font-extrabold text-vv-charged leading-tight">3</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Готово 100%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Фильтры ячеек -->
+        <div class="flex items-center gap-1.5 overflow-x-auto app-scroll">
+          <button
+            id="filter-btn-all"
+            onclick="setCellFilter('all')"
+            class="px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime text-vv-bg transition shrink-0"
+          >
+            Все (<span id="filter-count-all">50</span>)
+          </button>
+          <button
+            id="filter-btn-free"
+            onclick="setCellFilter('free')"
+            class="px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0"
+          >
+            Свободные (<span id="filter-count-free">40</span>)
+          </button>
+          <button
+            id="filter-btn-busy"
+            onclick="setCellFilter('busy')"
+            class="px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0"
+          >
+            Заняты (<span id="filter-count-busy">10</span>)
+          </button>
+        </div>
+
+        <!-- Сетка ячеек (строго 2 колонки на мобильном экране) -->
+        <div id="cells-grid" class="grid grid-cols-2 gap-2.5"></div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- ВКЛАДКА 2: ЛИЧНЫЙ КАБИНЕТ (ВХОД + ЗАРЯДКА + ОДНОРАЗОВЫЙ КОД)      -->
+      <!-- ================================================================= -->
+      <section id="tab-cabinet" class="hidden space-y-4">
+        <!-- ЭКРАН 2А: Вход в личный кабинет -->
+        <div id="cab-login-screen" class="space-y-4">
+          <div class="bg-vv-card border border-vv-border rounded-2xl p-5">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-11 h-11 rounded-2xl bg-vv-lime/15 border border-vv-lime/30 text-vv-lime flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-lg font-extrabold text-vv-text">Вход в кабинет</h2>
+                <p class="text-xs text-vv-muted">Авторизация в системе Вольт Вольт</p>
+              </div>
+            </div>
+
+            <form onsubmit="handleStudentLoginForm(event)" class="space-y-4">
+              <div>
+                <label for="input-student-id" class="block text-xs font-medium text-vv-muted mb-1.5">
+                  Почта или телефон
+                </label>
+                <input
+                  id="input-student-id"
+                  type="text"
+                  required
+                  autocomplete="username"
+                  placeholder="example@mail.ru или +7 (999) 000-00-00"
+                  class="w-full bg-vv-bg border border-vv-border focus:border-vv-lime rounded-xl px-3.5 py-3 text-sm text-vv-text placeholder-vv-muted/45 outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label for="input-student-pass" class="block text-xs font-medium text-vv-muted mb-1.5">
+                  Пароль
+                </label>
+                <input
+                  id="input-student-pass"
+                  type="password"
+                  required
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+                  class="w-full bg-vv-bg border border-vv-border focus:border-vv-lime rounded-xl px-3.5 py-3 text-sm text-vv-text placeholder-vv-muted/45 outline-none transition"
+                />
+              </div>
+
+              <button
+                type="submit"
+                class="w-full py-3.5 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition shadow-lg shadow-vv-lime/10"
+              >
+                Войти
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ЭКРАН 2Б: Дашборд авторизованного студента -->
+        <div id="cab-dashboard-screen" class="hidden space-y-4">
+          <!-- Карточка профиля -->
+          <div class="bg-vv-card border border-vv-border rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div id="cab-user-avatar" class="w-11 h-11 rounded-2xl bg-vv-lime text-vv-bg font-extrabold text-sm flex items-center justify-center shrink-0">
+                МА
+              </div>
+              <div class="min-w-0">
+                <h2 id="cab-user-name" class="text-sm font-extrabold text-vv-text truncate">Манаев Андрей Вадимович</h2>
+                <p id="cab-user-id" class="text-xs font-mono text-vv-muted truncate">ШМС-112</p>
+              </div>
+            </div>
+            <button
+              onclick="logoutStudent()"
+              class="px-3 py-2 rounded-xl bg-vv-bg border border-vv-border hover:border-vv-danger/50 text-xs font-semibold text-vv-muted hover:text-vv-danger transition shrink-0"
+            >
+              Выйти
+            </button>
+          </div>
+
+          <!-- Состояние 1: У студента нет занятой ячейки -->
+          <div id="cab-no-cell-card" class="bg-vv-card border border-vv-border rounded-2xl p-5 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-vv-bg border border-vv-border text-vv-muted mx-auto flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-vv-text">Нет активной зарядки</h3>
+              <p class="text-xs text-vv-muted mt-1 leading-relaxed">
+                Выберите любую свободную ячейку на вкладке «Ячейки», чтобы поставить смартфон на зарядку.
+              </p>
+            </div>
+            <button
+              onclick="switchTab('cells')"
+              class="w-full py-3 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover text-vv-bg font-extrabold text-sm transition"
+            >
+              Выбрать свободную ячейку
+            </button>
+          </div>
+
+          <!-- Состояние 2: Активная ячейка студента -->
+          <div id="cab-active-cell-card" class="hidden space-y-4">
+            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div id="cab-cell-number" class="w-10 h-10 rounded-xl bg-vv-lime text-vv-bg font-extrabold text-base flex items-center justify-center shrink-0">
+                    #1
+                  </div>
+                  <div>
+                    <h3 id="cab-cell-title" class="text-sm font-extrabold text-vv-text">Ячейка #1</h3>
+                    <p id="cab-door-status" class="text-xs text-vv-muted">Дверь закрыта</p>
+                  </div>
+                </div>
+
+                <span id="cab-relay-pill" class="px-2.5 py-1 rounded-lg bg-vv-free/15 border border-vv-free/30 text-[11px] font-mono font-bold text-vv-free">
+                  Питание 5V: ВКЛ
+                </span>
+              </div>
+
+              <!-- Активный ключ терминала MQTT (если получен с ESP32) -->
+              <div id="cab-mqtt-key-row" class="hidden flex items-center justify-between bg-vv-bg border border-vv-border rounded-xl px-3.5 py-2.5">
+                <span class="text-xs text-vv-muted">Ключ терминала (MQTT):</span>
+                <span id="cab-mqtt-key-val" class="text-xs font-mono font-bold text-vv-lime">—</span>
+              </div>
+
+              <!-- Крупный индикатор заряда (%) и живой таймер -->
+              <div class="bg-vv-bg border border-vv-border rounded-2xl p-4 space-y-3">
+                <div class="flex items-end justify-between gap-2">
+                  <div>
+                    <div class="text-[11px] text-vv-muted mb-0.5">Уровень заряда</div>
+                    <div id="cab-battery-pct" class="text-3xl font-extrabold text-vv-text leading-none">34%</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[11px] text-vv-muted mb-0.5">Осталось времени</div>
+                    <div id="cab-timer-hms" class="text-xl font-mono font-bold text-vv-lime leading-none">01:30:00</div>
+                  </div>
+                </div>
+
+                <div class="w-full h-2.5 bg-vv-card rounded-full overflow-hidden">
+                  <div id="cab-battery-bar" class="h-full bg-gradient-to-r from-vv-charging to-vv-lime rounded-full transition-all duration-500" style="width: 34%"></div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-1">
+                  <span id="cab-charge-substatus" class="text-xs text-vv-muted">Питание подано (Реле ON)</span>
+                  <button
+                    id="cab-btn-test-finish"
+                    onclick="simulateFinishCharging()"
+                    class="px-2.5 py-1.5 rounded-lg bg-vv-card hover:bg-vv-elevated border border-vv-border text-[11px] font-semibold text-vv-charged transition"
+                  >
+                    Тест: завершить 100%
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Карточка генератора одноразового кода получения -->
+            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3.5">
+              <div>
+                <h3 class="text-sm font-extrabold text-vv-text">Одноразовый код получения</h3>
+                <p class="text-xs text-vv-muted mt-0.5">
+                  Действует 10 или 15 минут для открытия замка на терминале
+                </p>
+              </div>
+
+              <!-- Выбор срока действия кода -->
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  id="otp-dur-10"
+                  type="button"
+                  onclick="selectOtpDuration(10)"
+                  class="py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition"
+                >
+                  10 минут
+                </button>
+                <button
+                  id="otp-dur-15"
+                  type="button"
+                  onclick="selectOtpDuration(15)"
+                  class="py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition"
+                >
+                  15 минут
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onclick="generatePickupOtp()"
+                class="w-full py-3 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition"
+              >
+                Сгенерировать код
+              </button>
+
+              <!-- Блок сгенерированного кода -->
+              <div id="otp-active-box" class="hidden bg-vv-bg border border-vv-border rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span id="otp-status-badge" class="px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[11px] font-bold text-vv-free">
+                    Активен
+                  </span>
+                  <span class="text-xs text-vv-muted">
+                    Истекает через: <strong id="otp-timer-display" class="font-mono text-vv-text">10:00</strong>
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 bg-vv-card border border-vv-border rounded-xl px-4 py-3">
+                  <span id="otp-code-display" class="text-2xl font-mono font-extrabold tracking-[0.2em] text-vv-lime">000000</span>
+                  <button
+                    type="button"
+                    onclick="copyPickupOtp()"
+                    class="px-3 py-1.5 rounded-lg bg-vv-bg hover:bg-vv-elevated border border-vv-border text-xs font-semibold text-vv-text transition active:scale-95"
+                  >
+                    Копия
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onclick="openPickupSheet()"
+                  class="w-full py-3 px-4 rounded-xl bg-vv-elevated hover:bg-vv-border border border-vv-lime/40 text-vv-lime font-bold text-xs transition"
+                >
+                  Ввести код на терминале (забрать телефон)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =================================================================== -->
+    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ (TAB BAR)                                   -->
+    <!-- =================================================================== -->
+    <nav class="shrink-0 bg-vv-card/95 backdrop-blur-md border-t border-vv-border px-3 py-2 grid grid-cols-2 gap-2 z-20">
+      <button
+        id="nav-btn-cells"
+        onclick="switchTab('cells')"
+        class="py-1.5 px-2 rounded-xl bg-vv-lime/15 text-vv-lime flex flex-col items-center justify-center gap-1 transition"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+        <span class="text-[11px] font-bold leading-none">Ячейки</span>
+      </button>
+
+      <button
+        id="nav-btn-cabinet"
+        onclick="switchTab('cabinet')"
+        class="py-1.5 px-2 rounded-xl text-vv-muted hover:text-vv-text flex flex-col items-center justify-center gap-1 transition"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        <span class="text-[11px] font-semibold leading-none">Кабинет</span>
+      </button>
+    </nav>
+
+    <!-- =================================================================== -->
+    <!-- BOTTOM SHEET 1: БРОНИРОВАНИЕ СВОБОДНОЙ ЯЧЕЙКИ                       -->
+    <!-- =================================================================== -->
+    <div id="sheet-occupy-backdrop" onclick="closeBottomSheet('sheet-occupy-backdrop')" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-[2px] flex-col justify-end">
+      <div onclick="event.stopPropagation()" class="bg-vv-card border-t border-vv-border rounded-t-3xl p-5 pb-safe animate-sheet-up space-y-4">
+        <div class="w-10 h-1 rounded-full bg-vv-border mx-auto"></div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <div id="sheet-cell-num-badge" class="w-11 h-11 rounded-2xl bg-vv-free/15 border border-vv-free/30 text-vv-free font-extrabold text-lg flex items-center justify-center shrink-0">
+              #3
+            </div>
+            <div>
+              <h3 id="sheet-cell-title" class="text-base font-extrabold text-vv-text">Ячейка #3 • Свободна</h3>
+              <p class="text-xs text-vv-muted">Макс. время зарядки: 1 ч 30 мин (5V)</p>
+            </div>
+          </div>
+          <button onclick="closeBottomSheet('sheet-occupy-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Контент шторки для АВТОРИЗОВАННОГО пользователя -->
+        <div id="sheet-occupy-auth-content" class="hidden space-y-3">
+          <p class="text-xs text-vv-muted leading-relaxed">
+            Замок откроется автоматически. Положите смартфон внутрь, подключите кабель и закройте дверцу — реле подаст питание.
+          </p>
+          <button
+            onclick="confirmOccupySelectedCell()"
+            class="w-full py-3.5 px-4 rounded-2xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition shadow-lg shadow-vv-lime/10"
+          >
+            Открыть замок и занять ячейку
+          </button>
+        </div>
+
+        <!-- Контент шторки для НЕАВТОРИЗОВАННОГО пользователя -->
+        <div id="sheet-occupy-guest-content" class="hidden space-y-3">
+          <p class="text-xs text-vv-muted leading-relaxed">
+            Для бронирования ячейки, отслеживания уровня заряда и генерации одноразового кода получения выполните вход в личный кабинет.
+          </p>
+          <button
+            onclick="goToCabinetLoginFromSheet()"
+            class="w-full py-3.5 px-4 rounded-2xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-vv-lime/10"
+          >
+            <span>Перейти ко входу в кабинет</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- BOTTOM SHEET 2: ЖИВАЯ ТЕЛЕМЕТРИЯ ESP32 / MQTT ДЛЯ ЯЧЕЙКИ #1         -->
+    <!-- =================================================================== -->
+    <div id="sheet-telemetry-backdrop" onclick="closeBottomSheet('sheet-telemetry-backdrop')" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-[2px] flex-col justify-end">
+      <div onclick="event.stopPropagation()" class="bg-vv-card border-t border-vv-border rounded-t-3xl p-5 pb-safe animate-sheet-up space-y-4 max-h-[88dvh] overflow-y-auto app-scroll">
+        <div class="w-10 h-1 rounded-full bg-vv-border mx-auto"></div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-vv-lime/15 border border-vv-lime/30 text-vv-lime font-extrabold text-lg flex items-center justify-center shrink-0">
+              #1
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h3 class="text-base font-extrabold text-vv-text">Ячейка #1</h3>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-vv-lime/15 text-vv-lime border border-vv-lime/25">ESP32 • MQTT</span>
+              </div>
+              <p class="text-xs text-vv-muted">Живая синхронизация с HiveMQ и Wokwi</p>
+            </div>
+          </div>
+          <button onclick="closeBottomSheet('sheet-telemetry-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Таблица живых параметров телеметрии -->
+        <div class="bg-vv-bg border border-vv-border rounded-2xl p-3.5 space-y-2.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-vv-muted">Статус (status):</span>
+            <span id="tel-status-val" class="font-bold text-vv-free">Свободна (FREE)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-vv-muted">Замок дверцы (door):</span>
+            <span id="tel-door-val" class="font-semibold text-vv-text">Закрыта (CLOSED)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-vv-muted">Питание (Реле GPIO 27):</span>
+            <span id="tel-relay-val" class="font-mono font-bold text-vv-muted">Реле OFF • Готово</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-vv-muted">Активный ключ (key):</span>
+            <span id="tel-key-val" class="font-mono font-bold text-vv-lime">—</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-vv-border">
+            <span class="text-vv-muted">Заряд и таймер:</span>
+            <span id="tel-charge-timer-val" class="font-mono font-bold text-vv-text">0% • 00:00:00</span>
+          </div>
+        </div>
+
+        <!-- Быстрый тест цикла Wokwi прямо из шторки -->
+        <div class="space-y-2">
+          <span class="block text-[11px] font-bold uppercase tracking-wider text-vv-muted">Тест шагов стенда ESP32 / Wokwi</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              onclick="simulateHardwareStep('step1_open')"
+              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
+            >
+              <div class="text-[11px] font-bold text-vv-lime">1. Открыть замок</div>
+              <div class="text-[10px] font-mono text-vv-muted">IN_USE • OPEN</div>
+            </button>
+            <button
+              onclick="simulateHardwareStep('step2_charge')"
+              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
+            >
+              <div class="text-[11px] font-bold text-vv-charging">2. Закрыть и заряжать</div>
+              <div class="text-[10px] font-mono text-vv-muted">IN_USE • CLOSED</div>
+            </button>
+            <button
+              onclick="simulateHardwareStep('step3_expired')"
+              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
+            >
+              <div class="text-[11px] font-bold text-vv-charged">3. 100% / Время вышло</div>
+              <div class="text-[10px] font-mono text-vv-muted">EXPIRED • RELAY OFF</div>
+            </button>
+            <button
+              onclick="simulateHardwareStep('step4_free')"
+              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
+            >
+              <div class="text-[11px] font-bold text-vv-free">4. Освободить ячейку</div>
+              <div class="text-[10px] font-mono text-vv-muted">FREE • CLOSED</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Кнопка перехода в кабинет или бронирования, если Ячейка #1 свободна -->
+        <button
+          id="tel-action-btn"
+          onclick="handleTelemetrySheetAction()"
+          class="w-full py-3.5 px-4 rounded-2xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition"
+        >
+          Занять Ячейку #1
+        </button>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- BOTTOM SHEET 3: ВВОД КОДА НА ШКАФЧИКЕ (ЗАБРАТЬ ТЕЛЕФОН)              -->
+    <!-- =================================================================== -->
+    <div id="sheet-pickup-backdrop" onclick="closeBottomSheet('sheet-pickup-backdrop')" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-[2px] flex-col justify-end">
+      <div onclick="event.stopPropagation()" class="bg-vv-card border-t border-vv-border rounded-t-3xl p-5 pb-safe animate-sheet-up space-y-4">
+        <div class="w-10 h-1 rounded-full bg-vv-border mx-auto"></div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-extrabold text-vv-text">Терминал выдачи</h3>
+            <p class="text-xs text-vv-muted">Введите 6-значный код из личного кабинета</p>
+          </div>
+          <button onclick="closeBottomSheet('sheet-pickup-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onsubmit="verifyPickupCode(event)" class="space-y-3">
+          <input
+            id="pickup-code-input"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            required
+            placeholder="000000"
+            class="w-full bg-vv-bg border border-vv-border focus:border-vv-lime rounded-2xl px-4 py-3.5 text-center text-2xl font-mono font-extrabold tracking-[0.25em] text-vv-lime outline-none"
+          />
+          <button
+            type="submit"
+            class="w-full py-3.5 px-4 rounded-2xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition"
+          >
+            Подтвердить код и открыть замок
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- ЛОГИКА ПРИЛОЖЕНИЯ ВОЛЬТ ВОЛЬТ                                         -->
+  <!-- ===================================================================== -->
+  <script>
+    // -----------------------------------------------------------------------
+    // 1. КОНСТАНТЫ И НАЧАЛЬНОЕ СОСТОЯНИЕ (50 ЯЧЕЕК)
+    // -----------------------------------------------------------------------
+    const TOTAL_CELLS = 50;
+    const MAX_CHARGE_SECONDS = 90 * 60; // 1 ч 30 мин (5400 сек)
+
+    const PRESET_BUSY_CELLS = {
+      2:  { status: 'charging', battery: 64, remainingSec: 32 * 60 + 18, relayOn: true },
+      4:  { status: 'charged',  battery: 100, remainingSec: 0,           relayOn: false },
+      6:  { status: 'charging', battery: 38, remainingSec: 55 * 60 + 40, relayOn: true },
+      11: { status: 'charging', battery: 82, remainingSec: 16 * 60 + 12, relayOn: true },
+      15: { status: 'charged',  battery: 100, remainingSec: 0,           relayOn: false },
+      19: { status: 'charging', battery: 47, remainingSec: 48 * 60 + 5,  relayOn: true },
+      24: { status: 'charging', battery: 71, remainingSec: 26 * 60 + 30, relayOn: true },
+      31: { status: 'charged',  battery: 100, remainingSec: 0,           relayOn: false },
+      37: { status: 'charging', battery: 29, remainingSec: 68 * 60 + 45, relayOn: true },
+      44: { status: 'charging', battery: 56, remainingSec: 39 * 60 + 50, relayOn: true },
+    };
+
+    let cells = Array.from({ length: TOTAL_CELLS }, (_, idx) => {
+      const id = idx + 1;
+      const preset = PRESET_BUSY_CELLS[id];
+      if (preset) {
+        return {
+          id,
+          status: preset.status,
+          door: 'CLOSED',
+          battery: preset.battery,
+          remainingSec: preset.remainingSec,
+          relayOn: preset.relayOn,
+          activeKey: null,
+          ownerId: `student_other_${id}`,
+          isHardware: false,
+        };
+      }
+      return {
+        id,
+        status: 'free',
+        door: 'CLOSED',
+        battery: 0,
+        remainingSec: 0,
+        relayOn: false,
+        activeKey: null,
+        ownerId: null,
+        isHardware: id === 1,
+      };
+    });
+
+    // Сырое состояние топиков ESP32 / Wokwi для Ячейки #1
+    let hwState = {
+      status: 'FREE',
+      door: 'CLOSED',
+      key: '-',
+    };
+
+    let activeTab = 'cells';         // 'cells' | 'cabinet' | 'mqtt'
+    let cellFilter = 'all';          // 'all' | 'free' | 'busy'
+    let user = null;                 // Текущий авторизованный студент
+    let selectedSheetCellId = null;  // ID ячейки, выбранной в шторке бронирования
+
+    // Состояние одноразового кода получения
+    let otp = {
+      durationMin: 10,
+      code: null,
+      remainingSec: 0,
+      expired: false,
+    };
+
+    // Состояние MQTT-клиента
+    let mqttClient = null;
+    let mqttStatus = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
+    let mqttLogs = [];
+
+    // -----------------------------------------------------------------------
+    // 2. УТИЛИТЫ ФОРМАТИРОВАНИЯ И ИНТЕРФЕЙСА
+    // -----------------------------------------------------------------------
+    function formatHMS(totalSec) {
+      const safe = Math.max(0, Math.floor(totalSec));
+      const h = Math.floor(safe / 3600);
+      const m = Math.floor((safe % 3600) / 60);
+      const s = safe % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function formatMS(totalSec) {
+      const safe = Math.max(0, Math.floor(totalSec));
+      const m = Math.floor(safe / 60);
+      const s = safe % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function showToast(title, subtitle = '', tone = 'lime') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const toneStyles = {
+        lime: 'border-vv-lime/40 bg-vv-card/95 text-vv-text',
+        free: 'border-vv-free/40 bg-vv-card/95 text-vv-text',
+        warn: 'border-vv-charging/40 bg-vv-card/95 text-vv-text',
+        danger: 'border-vv-danger/40 bg-vv-card/95 text-vv-text',
+      };
+
+      const dotColors = {
+        lime: 'bg-vv-lime',
+        free: 'bg-vv-free',
+        warn: 'bg-vv-charging',
+        danger: 'bg-vv-danger',
+      };
+
+      toast.className = `pointer-events-auto border ${toneStyles[tone] || toneStyles.lime} backdrop-blur-md rounded-2xl px-3.5 py-2.5 shadow-xl flex items-start gap-2.5 transition-all duration-300`;
+      toast.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${dotColors[tone] || dotColors.lime} mt-1.5 shrink-0"></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-bold leading-snug">${title}</div>
+          ${subtitle ? `<div class="text-[11px] text-vv-muted leading-snug mt-0.5">${subtitle}</div>` : ''}
+        </div>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    function toggleExpandView() {
+      const shell = document.getElementById('app-shell');
+      shell.classList.toggle('is-expanded');
+    }
+
+    function openBottomSheet(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    }
+
+    function closeBottomSheet(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+
+    function goToCabinetLoginFromSheet() {
+      closeBottomSheet('sheet-occupy-backdrop');
+      switchTab('cabinet');
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. НАВИГАЦИЯ ПО ВКЛАДКАМ И ОБНОВЛЕНИЕ ШАПКИ
+    // -----------------------------------------------------------------------
+    function switchTab(tab) {
+      activeTab = tab;
+
+      const tabs = ['cells', 'cabinet'];
+      tabs.forEach((t) => {
+        const sec = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (!sec || !btn) return;
+        if (t === tab) {
+          sec.classList.remove('hidden');
+          btn.className = 'relative py-1.5 px-2 rounded-xl bg-vv-lime/15 text-vv-lime flex flex-col items-center justify-center gap-1 transition';
+        } else {
+          sec.classList.add('hidden');
+          btn.className = 'relative py-1.5 px-2 rounded-xl text-vv-muted hover:text-vv-text flex flex-col items-center justify-center gap-1 transition';
+        }
+      });
+
+      if (tab === 'cells') renderCellsTab();
+      if (tab === 'cabinet') renderCabinetTab();
+    }
+
+    function updateHeaderAndNavIndicators() {
+      const badge = document.getElementById('header-user-badge');
+      if (user) {
+        badge.className = 'w-8 h-8 rounded-full bg-vv-lime text-vv-bg flex items-center justify-center text-xs font-extrabold transition';
+        badge.textContent = user.initials;
+      } else {
+        badge.className = 'w-8 h-8 rounded-full bg-vv-bg border border-vv-border hover:border-vv-lime/50 flex items-center justify-center text-xs font-bold text-vv-muted transition';
+        badge.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        `;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4. РЕНДЕРИНГ ВКЛАДКИ «ЯЧЕЙКИ» И ШТОРКИ ТЕЛЕМЕТРИИ ESP32
+    // -----------------------------------------------------------------------
+    function setCellFilter(filter) {
+      cellFilter = filter;
+      renderCellsTab();
+    }
+
+    function renderCellsTab() {
+      const freeCount = cells.filter((c) => c.status === 'free').length;
+      const chargingCount = cells.filter((c) => c.status === 'charging' || c.status === 'awaiting_put').length;
+      const chargedCount = cells.filter((c) => c.status === 'charged').length;
+      const busyCount = cells.length - freeCount;
+
+      document.getElementById('summary-free-ratio').textContent = `${freeCount} / ${cells.length} свободно`;
+      document.getElementById('stat-free').textContent = freeCount;
+      document.getElementById('stat-charging').textContent = chargingCount;
+      document.getElementById('stat-charged').textContent = chargedCount;
+
+      document.getElementById('filter-count-all').textContent = cells.length;
+      document.getElementById('filter-count-free').textContent = freeCount;
+      document.getElementById('filter-count-busy').textContent = busyCount;
+
+      const filterMap = {
+        all: 'filter-btn-all',
+        free: 'filter-btn-free',
+        busy: 'filter-btn-busy',
+      };
+
+      Object.entries(filterMap).forEach(([key, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (key === cellFilter) {
+          btn.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime text-vv-bg transition shrink-0';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0';
+        }
+      });
+
+      const filteredCells = cells.filter((c) => {
+        if (cellFilter === 'free') return c.status === 'free';
+        if (cellFilter === 'busy') return c.status !== 'free';
+        return true;
+      });
+
+      const grid = document.getElementById('cells-grid');
+      grid.innerHTML = filteredCells.map((cell) => {
+        const isMine = user && cell.ownerId === user.id && cell.status !== 'free';
+        const isDoorOpen = cell.door === 'OPEN';
+
+        let badgeHtml = '';
+        let barColor = 'bg-vv-border';
+        let barWidth = 0;
+        let topStatLeft = 'Заряд';
+        let topStatRight = 'Готова • 5V';
+        let topStatLeftClass = 'text-vv-muted';
+        let topStatRightClass = 'text-vv-free font-semibold';
+        let footerText = 'Нажмите, чтобы занять';
+        let cardBorderClass = isMine ? 'border-vv-lime/60' : 'border-vv-border hover:border-vv-lime/40';
+
+        if (cell.status === 'free') {
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-free/15 text-vv-free text-[11px] font-bold">Свободна</span>';
+        } else if (cell.status === 'awaiting_put') {
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-lime/15 text-vv-lime text-[11px] font-bold">Открыта</span>';
+          barColor = 'bg-vv-lime';
+          barWidth = 12;
+          topStatLeft = 'Ожидание';
+          topStatLeftClass = 'text-vv-lime font-bold';
+          topStatRight = '01:30:00';
+          topStatRightClass = 'font-mono text-vv-muted';
+          footerText = 'Положите телефон';
+        } else if (cell.status === 'charging') {
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 text-vv-charging text-[11px] font-bold">Заряжается</span>';
+          barColor = 'bg-vv-charging';
+          barWidth = Math.round(cell.battery);
+          topStatLeft = `${Math.round(cell.battery)}%`;
+          topStatLeftClass = 'text-vv-charging font-extrabold';
+          topStatRight = formatHMS(cell.remainingSec);
+          topStatRightClass = 'font-mono text-vv-muted';
+          footerText = isMine ? 'Ваша ячейка • Реле ON' : 'Питание подано';
+        } else if (cell.status === 'charged') {
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charged/15 text-vv-charged text-[11px] font-bold">Заряжен</span>';
+          barColor = 'bg-vv-charged';
+          barWidth = 100;
+          topStatLeft = '100%';
+          topStatLeftClass = 'text-vv-charged font-extrabold';
+          topStatRight = '00:00:00';
+          topStatRightClass = 'font-mono text-vv-muted';
+          footerText = 'Ток отключён (Реле OFF)';
+        }
+
+        const ownerTag = isMine
+          ? '<span class="px-1.5 py-0.5 rounded bg-vv-lime/15 text-[9px] font-bold text-vv-lime leading-none">Вы</span>'
+          : '';
+
+        const keyBadge = cell.activeKey
+          ? `<div class="px-2 py-1 rounded-lg bg-vv-bg border border-vv-border text-[10px] font-mono text-vv-lime truncate">Ключ: ${cell.activeKey}</div>`
+          : '';
+
+        return `
+          <div
+            onclick="handleCellCardClick(${cell.id})"
+            class="bg-vv-card border ${cardBorderClass} rounded-2xl p-3 flex flex-col justify-between gap-2 cursor-pointer active:scale-[0.98] transition"
+          >
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-extrabold text-vv-text leading-none">#${cell.id}</span>
+                  ${ownerTag}
+                </div>
+                ${badgeHtml}
+              </div>
+
+              <div class="flex items-center gap-1 text-[11px] ${isDoorOpen ? 'text-vv-lime font-semibold' : 'text-vv-muted'}">
+                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  ${isDoorOpen
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />'}
+                </svg>
+                <span class="truncate">${isDoorOpen ? 'Открыта' : 'Закрыта'}</span>
+              </div>
+
+              ${keyBadge}
+            </div>
+
+            <div class="space-y-1 pt-0.5">
+              <div class="flex items-center justify-between gap-1 text-[11px]">
+                <span class="${topStatLeftClass}">${topStatLeft}</span>
+                <span class="${topStatRightClass}">${topStatRight}</span>
+              </div>
+              <div class="w-full h-1.5 bg-vv-bg rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width: ${barWidth}%"></div>
+              </div>
+              <div class="text-[10px] text-vv-muted truncate">${footerText}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleCellCardClick(cellId) {
+      const cell = cells.find((c) => c.id === cellId);
+      if (!cell) return;
+
+      if (cell.isHardware) {
+        updateTelemetrySheetData();
+        openBottomSheet('sheet-telemetry-backdrop');
+        return;
+      }
+
+      if (cell.status === 'free') {
+        openOccupySheet(cell.id);
+        return;
+      }
+
+      if (user && cell.ownerId === user.id) {
+        switchTab('cabinet');
+        return;
+      }
+
+      showToast(`Ячейка #${cell.id} занята`, 'Выберите свободную ячейку для зарядки.', 'warn');
+    }
+
+    function openOccupySheet(cellId) {
+      selectedSheetCellId = cellId;
+      document.getElementById('sheet-cell-num-badge').textContent = `#${cellId}`;
+      document.getElementById('sheet-cell-title').textContent = `Ячейка #${cellId} • Свободна`;
+
+      const authBlock = document.getElementById('sheet-occupy-auth-content');
+      const guestBlock = document.getElementById('sheet-occupy-guest-content');
+
+      if (user) {
+        authBlock.classList.remove('hidden');
+        guestBlock.classList.add('hidden');
+      } else {
+        authBlock.classList.add('hidden');
+        guestBlock.classList.remove('hidden');
+      }
+
+      openBottomSheet('sheet-occupy-backdrop');
+    }
+
+    function confirmOccupySelectedCell() {
+      if (!user) {
+        goToCabinetLoginFromSheet();
+        return;
+      }
+
+      const existingCell = cells.find((c) => c.ownerId === user.id && c.status !== 'free');
+      if (existingCell) {
+        closeBottomSheet('sheet-occupy-backdrop');
+        showToast(`У вас уже занята Ячейка #${existingCell.id}`, 'Сначала завершите текущую сессию в кабинете.', 'warn');
+        switchTab('cabinet');
+        return;
+      }
+
+      const target = cells.find((c) => c.id === selectedSheetCellId);
+      if (!target || target.status !== 'free') {
+        closeBottomSheet('sheet-occupy-backdrop');
+        showToast('Ячейка недоступна', 'Попробуйте выбрать другой свободный слот.', 'danger');
+        return;
+      }
+
+      target.status = 'charging';
+      target.door = 'CLOSED';
+      target.battery = 22;
+      target.remainingSec = MAX_CHARGE_SECONDS;
+      target.relayOn = true;
+      target.ownerId = user.id;
+
+      if (target.id === 1) {
+        const generatedKey = Math.random().toString(16).substring(2, 10);
+        hwState.status = 'IN_USE';
+        hwState.door = 'CLOSED';
+        hwState.key = generatedKey;
+        target.activeKey = generatedKey;
+        publishHardwareTopic('locker_project/key', generatedKey);
+        publishHardwareTopic('locker_project/status', 'IN_USE');
+        publishHardwareTopic('locker_project/door', 'CLOSED');
+        updateTelemetrySheetData();
+      }
+
+      closeBottomSheet('sheet-occupy-backdrop');
+      showToast(`Ячейка #${target.id} забронирована`, 'Питание 5V подано, таймер 90 мин запущен.', 'free');
+      switchTab('cabinet');
+    }
+
+    function updateTelemetrySheetData() {
+      const cell1 = cells[0];
+      if (!cell1) return;
+
+      const statusEl = document.getElementById('tel-status-val');
+      const doorEl = document.getElementById('tel-door-val');
+      const relayEl = document.getElementById('tel-relay-val');
+      const keyEl = document.getElementById('tel-key-val');
+      const chargeTimerEl = document.getElementById('tel-charge-timer-val');
+      const actionBtn = document.getElementById('tel-action-btn');
+
+      if (!statusEl) return;
+
+      const statusLabels = {
+        free: ['Свободна (FREE)', 'font-bold text-vv-free'],
+        awaiting_put: ['Ожидание закладки (IN_USE)', 'font-bold text-vv-lime'],
+        charging: ['Заряжается (IN_USE)', 'font-bold text-vv-charging'],
+        charged: ['Заряжен 100% (EXPIRED)', 'font-bold text-vv-charged'],
+      };
+
+      const [statusText, statusClass] = statusLabels[cell1.status] || statusLabels.free;
+      statusEl.textContent = statusText;
+      statusEl.className = statusClass;
+
+      const isOpen = cell1.door === 'OPEN';
+      doorEl.textContent = isOpen ? 'Открыта (OPEN)' : 'Закрыта (CLOSED)';
+      doorEl.className = isOpen ? 'font-bold text-vv-lime' : 'font-semibold text-vv-text';
+
+      relayEl.textContent = cell1.relayOn ? 'Реле ON • Питание 5V' : 'Реле OFF • Обесточено';
+      relayEl.className = cell1.relayOn ? 'font-mono font-bold text-vv-free' : 'font-mono font-bold text-vv-muted';
+
+      keyEl.textContent = cell1.activeKey || '—';
+      chargeTimerEl.textContent = `${Math.round(cell1.battery)}% • ${formatHMS(cell1.remainingSec)}`;
+
+      if (cell1.status === 'free') {
+        actionBtn.textContent = 'Занять Ячейку #1';
+      } else if (user && cell1.ownerId === user.id) {
+        actionBtn.textContent = 'Перейти в личный кабинет';
+      } else {
+        actionBtn.textContent = 'Открыть личный кабинет';
+      }
+    }
+
+    function handleTelemetrySheetAction() {
+      const cell1 = cells[0];
+      closeBottomSheet('sheet-telemetry-backdrop');
+      if (cell1 && cell1.status === 'free') {
+        openOccupySheet(1);
+      } else {
+        switchTab('cabinet');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. ЛИЧНЫЙ КАБИНЕТ, АВТОРИЗАЦИЯ И ОДНОРАЗОВЫЙ КОД ПОЛУЧЕНИЯ (OTP)
+    // -----------------------------------------------------------------------
+    function handleStudentLoginForm(event) {
+      event.preventDefault();
+      const rawLogin = document.getElementById('input-student-id').value.trim();
+      const rawPass = document.getElementById('input-student-pass').value.trim();
+
+      if (!rawLogin || !rawPass) {
+        showToast('Заполните все поля', 'Укажите почту или телефон и пароль для входа.', 'warn');
+        return;
+      }
+
+      const normalized = rawLogin.toLowerCase();
+      const isEmail = rawLogin.includes('@');
+      const displayName = isEmail ? rawLogin.split('@')[0] : rawLogin;
+      const cleanLetters = displayName.replace(/[^a-zA-Zа-яА-ЯёЁ]/g, '');
+      const initials = cleanLetters.length >= 2
+        ? cleanLetters.slice(0, 2).toUpperCase()
+        : 'ВВ';
+
+      user = {
+        id: 'user_' + normalized.replace(/[^a-z0-9]/g, '_'),
+        name: displayName,
+        badge: rawLogin,
+        initials,
+      };
+
+      // Если Ячейка #1 занята со стенда ESP32 без привязки, привязываем её к вошедшему пользователю
+      if (cells[0].status !== 'free' && cells[0].ownerId === 'esp32_user') {
+        cells[0].ownerId = user.id;
+      }
+
+      updateHeaderAndNavIndicators();
+      renderCellsTab();
+      renderCabinetTab();
+      showToast(`Добро пожаловать, ${user.name}`, 'Личный кабинет Вольт Вольт активирован.', 'free');
+    }
+
+    function logoutStudent() {
+      user = null;
+      otp = {
+        durationMin: 10,
+        code: null,
+        remainingSec: 0,
+        expired: false,
+      };
+      document.getElementById('input-student-pass').value = '';
+      updateHeaderAndNavIndicators();
+      renderCellsTab();
+      renderCabinetTab();
+      showToast('Вы вышли из аккаунта', 'Сессия личного кабинета завершена.', 'warn');
+    }
+
+    function renderCabinetTab() {
+      const loginScreen = document.getElementById('cab-login-screen');
+      const dashScreen = document.getElementById('cab-dashboard-screen');
+
+      if (!user) {
+        loginScreen.classList.remove('hidden');
+        dashScreen.classList.add('hidden');
+        return;
+      }
+
+      loginScreen.classList.add('hidden');
+      dashScreen.classList.remove('hidden');
+
+      document.getElementById('cab-user-avatar').textContent = user.initials;
+      document.getElementById('cab-user-name').textContent = user.name;
+      document.getElementById('cab-user-id').textContent = user.badge;
+
+      const myCell = cells.find((c) => c.ownerId === user.id && c.status !== 'free');
+      const noCellCard = document.getElementById('cab-no-cell-card');
+      const activeCellCard = document.getElementById('cab-active-cell-card');
+
+      if (!myCell) {
+        noCellCard.classList.remove('hidden');
+        activeCellCard.classList.add('hidden');
+        return;
+      }
+
+      noCellCard.classList.add('hidden');
+      activeCellCard.classList.remove('hidden');
+
+      document.getElementById('cab-cell-number').textContent = `#${myCell.id}`;
+      document.getElementById('cab-cell-title').textContent = `Ячейка #${myCell.id}`;
+      document.getElementById('cab-door-status').textContent = myCell.door === 'OPEN' ? 'Дверь открыта' : 'Дверь закрыта';
+
+      const relayPill = document.getElementById('cab-relay-pill');
+      if (myCell.relayOn) {
+        relayPill.textContent = 'Питание 5V: ВКЛ';
+        relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-free/15 border border-vv-free/30 text-[11px] font-mono font-bold text-vv-free';
+      } else {
+        relayPill.textContent = 'Питание 5V: ВЫКЛ';
+        relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-bg border border-vv-border text-[11px] font-mono font-bold text-vv-muted';
+      }
+
+      const keyRow = document.getElementById('cab-mqtt-key-row');
+      if (myCell.activeKey) {
+        keyRow.classList.remove('hidden');
+        document.getElementById('cab-mqtt-key-val').textContent = myCell.activeKey;
+      } else {
+        keyRow.classList.add('hidden');
+      }
+
+      const pct = Math.round(myCell.battery);
+      document.getElementById('cab-battery-pct').textContent = `${pct}%`;
+      document.getElementById('cab-timer-hms').textContent = formatHMS(myCell.remainingSec);
+      document.getElementById('cab-battery-bar').style.width = `${pct}%`;
+
+      const substatusEl = document.getElementById('cab-charge-substatus');
+      const finishBtn = document.getElementById('cab-btn-test-finish');
+
+      if (myCell.status === 'charged') {
+        substatusEl.textContent = 'Телефон заряжен • Реле обесточено';
+        substatusEl.className = 'text-xs font-semibold text-vv-charged';
+        finishBtn.classList.add('hidden');
+      } else if (myCell.status === 'awaiting_put') {
+        substatusEl.textContent = 'Положите телефон и закройте дверцу';
+        substatusEl.className = 'text-xs font-semibold text-vv-lime';
+        finishBtn.classList.remove('hidden');
+      } else {
+        substatusEl.textContent = 'Питание подано (Реле ON)';
+        substatusEl.className = 'text-xs text-vv-muted';
+        finishBtn.classList.remove('hidden');
+      }
+
+      renderOtpSection();
+    }
+
+    function simulateFinishCharging() {
+      if (!user) return;
+      const myCell = cells.find((c) => c.ownerId === user.id && c.status !== 'free');
+      if (!myCell) return;
+
+      myCell.status = 'charged';
+      myCell.battery = 100;
+      myCell.remainingSec = 0;
+      myCell.relayOn = false;
+
+      if (myCell.id === 1) {
+        hwState.status = 'EXPIRED';
+        publishHardwareTopic('locker_project/status', 'EXPIRED');
+        updateTelemetrySheetData();
+      }
+
+      renderCabinetTab();
+      renderCellsTab();
+      showToast(`Ячейка #${myCell.id}: зарядка завершена (100%)`, 'Реле автоматически отключило питание.', 'free');
+    }
+
+    function selectOtpDuration(minutes) {
+      otp.durationMin = minutes;
+      const btn10 = document.getElementById('otp-dur-10');
+      const btn15 = document.getElementById('otp-dur-15');
+
+      if (minutes === 10) {
+        btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
+        btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
+      } else {
+        btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
+        btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
+      }
+    }
+
+    function generatePickupOtp() {
+      if (!user) return;
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      otp.code = code;
+      otp.remainingSec = otp.durationMin * 60;
+      otp.expired = false;
+
+      renderOtpSection();
+      showToast(`Одноразовый код: ${code}`, `Действует ${otp.durationMin} минут для получения телефона.`, 'lime');
+    }
+
+    function renderOtpSection() {
+      const box = document.getElementById('otp-active-box');
+      if (!otp.code) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      box.classList.remove('hidden');
+      document.getElementById('otp-code-display').textContent = otp.code;
+      document.getElementById('otp-timer-display').textContent = formatMS(otp.remainingSec);
+
+      const badge = document.getElementById('otp-status-badge');
+      if (otp.expired) {
+        badge.textContent = 'Истёк';
+        badge.className = 'px-2 py-0.5 rounded-md bg-vv-danger/15 border border-vv-danger/30 text-[11px] font-bold text-vv-danger';
+      } else {
+        badge.textContent = 'Активен';
+        badge.className = 'px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[11px] font-bold text-vv-free';
+      }
+    }
+
+    function copyPickupOtp() {
+      if (!otp.code) return;
+      const tempInput = document.createElement('textarea');
+      tempInput.value = otp.code;
+      tempInput.style.position = 'fixed';
+      tempInput.style.opacity = '0';
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('Код скопирован', `${otp.code} в буфере обмена.`, 'free');
+      } catch (e) {
+        showToast('Не удалось скопировать', `Запомните код: ${otp.code}`, 'warn');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function openPickupSheet() {
+      if (!otp.code || otp.expired) {
+        showToast('Срок кода истёк', 'Сначала сгенерируйте новый одноразовый код.', 'warn');
+        return;
+      }
+      document.getElementById('pickup-code-input').value = '';
+      openBottomSheet('sheet-pickup-backdrop');
+    }
+
+    function verifyPickupCode(event) {
+      event.preventDefault();
+      const entered = document.getElementById('pickup-code-input').value.trim();
+
+      if (!otp.code || otp.expired) {
+        showToast('Код недействителен', 'Время действия кода истекло, создайте новый.', 'danger');
+        return;
+      }
+
+      if (entered !== otp.code) {
+        showToast('Неверный код', 'Проверьте 6 цифр из личного кабинета.', 'danger');
+        return;
+      }
+
+      const myCell = user ? cells.find((c) => c.ownerId === user.id && c.status !== 'free') : null;
+      const freedCellId = myCell ? myCell.id : 1;
+
+      if (myCell) {
+        myCell.status = 'free';
+        myCell.door = 'CLOSED';
+        myCell.battery = 0;
+        myCell.remainingSec = 0;
+        myCell.relayOn = false;
+        myCell.activeKey = null;
+        myCell.ownerId = null;
+
+        if (myCell.id === 1) {
+          hwState = { status: 'FREE', door: 'CLOSED', key: '-' };
+          publishHardwareTopic('locker_project/status', 'FREE');
+          publishHardwareTopic('locker_project/door', 'CLOSED');
+          publishHardwareTopic('locker_project/key', '-');
+          updateTelemetrySheetData();
+        }
+      }
+
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
+
+      closeBottomSheet('sheet-pickup-backdrop');
+      renderCabinetTab();
+      renderCellsTab();
+      showToast(`Замок Ячейки #${freedCellId} открыт`, 'Заберите телефон и закройте дверцу.', 'free');
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. ФОНОВАЯ СИНХРОНИЗАЦИЯ HIVEMQ (WSS) ДЛЯ ЯЧЕЙКИ #1
+    // -----------------------------------------------------------------------
+    function appendMqttLog(dir, topic, payload) {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      mqttLogs.unshift({ timeStr, dir, topic, payload });
+      if (mqttLogs.length > 40) mqttLogs.pop();
+    }
+
+    function updateMqttIndicators(status) {
+      mqttStatus = status;
+    }
+
+    function connectMqtt(silent = false) {
+      if (typeof mqtt === 'undefined') {
+        updateMqttIndicators('error');
+        if (!silent) showToast('MQTT.js недоступен', 'Проверьте подключение к интернету.', 'danger');
+        return;
+      }
+
+      if (mqttClient) {
+        try {
+          mqttClient.end(true);
+        } catch (e) {
+          console.warn(e);
+        }
+        mqttClient = null;
+      }
+
+      updateMqttIndicators('connecting');
+      const clientId = 'voltvolt_pwa_' + Math.random().toString(16).substring(2, 10);
+
+      try {
+        mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+          clientId,
+          clean: true,
+          connectTimeout: 6000,
+          reconnectPeriod: 5000,
+        });
+
+        mqttClient.on('connect', () => {
+          updateMqttIndicators('connected');
+          appendMqttLog('SYS', 'broker.hivemq.com:8884', 'CONNECTED');
+
+          mqttClient.subscribe([
+            'locker_project/status',
+            'locker_project/door',
+            'locker_project/key',
+          ], (err) => {
+            if (!err && !silent) {
+              showToast('HiveMQ подключён', 'Ячейка #1 синхронизирована с ESP32.', 'free');
+            }
+          });
+        });
+
+        mqttClient.on('message', (topic, message) => {
+          const payload = message.toString().trim();
+          appendMqttLog('RX', topic, payload);
+          applyIncomingHardwarePacket(topic, payload);
+        });
+
+        mqttClient.on('error', () => {
+          updateMqttIndicators('error');
+          appendMqttLog('SYS', 'broker.hivemq.com', 'CONN_ERROR');
+        });
+
+        mqttClient.on('offline', () => {
+          if (mqttStatus === 'connected') {
+            updateMqttIndicators('error');
+            appendMqttLog('SYS', 'broker.hivemq.com', 'OFFLINE');
+          }
+        });
+      } catch (err) {
+        updateMqttIndicators('error');
+        if (!silent) showToast('Ошибка подключения MQTT', err.message, 'danger');
+      }
+    }
+
+    function toggleMqttConnection() {
+      if (mqttStatus === 'connected' || mqttStatus === 'connecting') {
+        if (mqttClient) {
+          try {
+            mqttClient.end(true);
+          } catch (e) {
+            console.warn(e);
+          }
+          mqttClient = null;
+        }
+        updateMqttIndicators('disconnected');
+        appendMqttLog('SYS', 'broker.hivemq.com', 'DISCONNECTED');
+        showToast('MQTT отключён', 'Нажмите «MQTT Live» для повторного подключения.', 'warn');
+        return;
+      }
+
+      connectMqtt(false);
+    }
+
+    function publishHardwareTopic(topic, payload) {
+      if (mqttClient && mqttStatus === 'connected') {
+        try {
+          mqttClient.publish(topic, String(payload), { retain: true });
+          appendMqttLog('TX', topic, payload);
+        } catch (e) {
+          console.warn('MQTT publish error:', e);
+        }
+      }
+    }
+
+    function syncCell1FromMqtt() {
+      const cell1 = cells[0];
+      const normalizedStatus = (hwState.status || 'FREE').toUpperCase();
+      const normalizedDoor = (hwState.door || 'CLOSED').toUpperCase();
+      const rawKey = (hwState.key || '-').trim();
+
+      cell1.activeKey = rawKey && rawKey !== '-' ? rawKey : null;
+      cell1.door = normalizedDoor === 'OPEN' ? 'OPEN' : 'CLOSED';
+
+      if (normalizedStatus === 'FREE') {
+        cell1.status = 'free';
+        cell1.battery = 0;
+        cell1.remainingSec = 0;
+        cell1.relayOn = false;
+        cell1.ownerId = null;
+      } else if (normalizedStatus === 'IN_USE') {
+        if (user && (!cell1.ownerId || cell1.ownerId === 'esp32_user')) {
+          cell1.ownerId = user.id;
+        } else if (!cell1.ownerId) {
+          cell1.ownerId = 'esp32_user';
+        }
+
+        if (cell1.door === 'OPEN') {
+          cell1.status = 'awaiting_put';
+          cell1.battery = 0;
+          cell1.remainingSec = MAX_CHARGE_SECONDS;
+          cell1.relayOn = false;
+        } else {
+          if (cell1.status !== 'charging') {
+            cell1.remainingSec = MAX_CHARGE_SECONDS;
+            cell1.battery = 20;
+          }
+          cell1.status = 'charging';
+          cell1.relayOn = true;
+        }
+      } else if (normalizedStatus === 'EXPIRED') {
+        cell1.status = 'charged';
+        cell1.battery = 100;
+        cell1.remainingSec = 0;
+        cell1.relayOn = false;
+      }
+
+      updateHeaderAndNavIndicators();
+      updateTelemetrySheetData();
+      if (activeTab === 'cells') renderCellsTab();
+      if (activeTab === 'cabinet') renderCabinetTab();
+    }
+
+    function applyIncomingHardwarePacket(topic, payload) {
+      if (topic === 'locker_project/status') {
+        hwState.status = payload;
+      } else if (topic === 'locker_project/door') {
+        hwState.door = payload;
+      } else if (topic === 'locker_project/key') {
+        hwState.key = payload;
+      }
+
+      syncCell1FromMqtt();
+    }
+
+    function simulateHardwareStep(step) {
+      if (step === 'step1_open') {
+        const fakeKey = Math.random().toString(16).substring(2, 10);
+        applyIncomingHardwarePacket('locker_project/key', fakeKey);
+        applyIncomingHardwarePacket('locker_project/status', 'IN_USE');
+        applyIncomingHardwarePacket('locker_project/door', 'OPEN');
+        publishHardwareTopic('locker_project/key', fakeKey);
+        publishHardwareTopic('locker_project/status', 'IN_USE');
+        publishHardwareTopic('locker_project/door', 'OPEN');
+        showToast('Сигнал ESP32: Шаг 1', `Дверь открыта • Ключ: ${fakeKey}`, 'lime');
+      } else if (step === 'step2_charge') {
+        applyIncomingHardwarePacket('locker_project/status', 'IN_USE');
+        applyIncomingHardwarePacket('locker_project/door', 'CLOSED');
+        publishHardwareTopic('locker_project/status', 'IN_USE');
+        publishHardwareTopic('locker_project/door', 'CLOSED');
+        showToast('Сигнал ESP32: Шаг 2', 'Дверца закрыта, таймер 90 мин запущен.', 'warn');
+      } else if (step === 'step3_expired') {
+        applyIncomingHardwarePacket('locker_project/status', 'EXPIRED');
+        publishHardwareTopic('locker_project/status', 'EXPIRED');
+        showToast('Сигнал ESP32: Шаг 3', 'Заряжен 100% • Реле обесточило Ячейку #1.', 'free');
+      } else if (step === 'step4_free') {
+        applyIncomingHardwarePacket('locker_project/status', 'FREE');
+        applyIncomingHardwarePacket('locker_project/door', 'CLOSED');
+        applyIncomingHardwarePacket('locker_project/key', '-');
+        publishHardwareTopic('locker_project/status', 'FREE');
+        publishHardwareTopic('locker_project/door', 'CLOSED');
+        publishHardwareTopic('locker_project/key', '-');
+        showToast('Сигнал ESP32: Шаг 4', 'Ячейка #1 свободна и готова к работе.', 'free');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 7. ФОНОВЫЙ ТАЙМЕР ЗАРЯДКИ (90 МИН) И СРОКА ДЕЙСТВИЯ OTP-КОДА
+    // -----------------------------------------------------------------------
+    setInterval(() => {
+      let cellsUpdated = false;
+
+      cells.forEach((cell) => {
+        if (cell.status === 'charging') {
+          if (cell.remainingSec > 0) {
+            cell.remainingSec -= 1;
+            const progressRatio = 1 - (cell.remainingSec / MAX_CHARGE_SECONDS);
+            cell.battery = Math.min(99, Math.max(cell.battery, 20 + progressRatio * 80));
+            cellsUpdated = true;
+          } else {
+            cell.status = 'charged';
+            cell.battery = 100;
+            cell.remainingSec = 0;
+            cell.relayOn = false;
+            cellsUpdated = true;
+
+            if (cell.id === 1) {
+              hwState.status = 'EXPIRED';
+              publishHardwareTopic('locker_project/status', 'EXPIRED');
+            }
+            if (user && cell.ownerId === user.id) {
+              showToast(`Ячейка #${cell.id}: 100% заряда!`, 'Питание автоматически отключено реле.', 'free');
+            }
+          }
+        }
+      });
+
+      if (otp.code && !otp.expired) {
+        if (otp.remainingSec > 0) {
+          otp.remainingSec -= 1;
+          if (otp.remainingSec === 0) {
+            otp.expired = true;
+            showToast('Срок действия кода истёк', 'Сгенерируйте новый код в личном кабинете.', 'warn');
+          }
+          if (activeTab === 'cabinet') {
+            renderOtpSection();
+          }
+        }
+      }
+
+      if (cellsUpdated) {
+        updateTelemetrySheetData();
+        if (activeTab === 'cells') renderCellsTab();
+        if (activeTab === 'cabinet') renderCabinetTab();
+      }
+    }, 1000);
+
+    // -----------------------------------------------------------------------
+    // 8. СТАРТОВАЯ ИНИЦИАЛИЗАЦИЯ
+    // -----------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCellsTab();
+      updateHeaderAndNavIndicators();
+      connectMqtt(true);
+    });
+  </script>
+</body>
+</html>
