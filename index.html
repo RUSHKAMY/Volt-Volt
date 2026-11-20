@@ -63,10 +63,11 @@
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100dvh;
       background-color: #070a09;
       color: #f1f5f3;
       font-family: 'Inter', sans-serif;
-      height: 100dvh;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -78,6 +79,7 @@
       width: 100%;
       max-width: 100%;
       height: 100dvh;
+      flex-shrink: 0;
       margin: 0 auto;
       background-color: #0b0f0e;
       display: flex;
@@ -109,7 +111,12 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    /* Скрытие полос прокрутки в контейнере контента */
+    /* Стабильная геометрия скролла без скачков ширины при фильтрации */
+    .main-scroll-area {
+      overflow-y: scroll;
+      scrollbar-gutter: stable;
+    }
+
     .app-scroll::-webkit-scrollbar {
       width: 4px;
       height: 4px;
@@ -197,11 +204,11 @@
     <!-- =================================================================== -->
     <!-- ОСНОВНОЙ СКРОЛЛИРУЕМЫЙ КОНТЕНТ ВКЛАДОК                              -->
     <!-- =================================================================== -->
-    <main class="flex-1 overflow-y-auto app-scroll px-3.5 pt-3 pb-4">
+    <main class="flex-1 min-h-0 min-w-0 main-scroll-area app-scroll pl-3.5 pr-2.5 pt-3 pb-4">
       <!-- ================================================================= -->
       <!-- ВКЛАДКА 1: ВЫПАДАЮЩИЙ СПИСОК ЭТАЖЕЙ (8 КОРПУС) И ЯЧЕЙКИ           -->
       <!-- ================================================================= -->
-      <section id="tab-cells" class="space-y-3">
+      <section id="tab-cells" class="space-y-3 w-full">
         <!-- Выпадающий список выбора этажа в 8 корпусе -->
         <div id="building-dropdown-wrapper" class="relative z-30">
           <button
@@ -271,7 +278,7 @@
           <button
             id="filter-btn-all"
             onclick="setCellFilter('all')"
-            class="px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime text-vv-bg transition shrink-0"
+            class="px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime border border-transparent text-vv-bg transition shrink-0"
           >
             Все (<span id="filter-count-all">50</span>)
           </button>
@@ -292,13 +299,13 @@
         </div>
 
         <!-- Сетка ячеек (строго 2 колонки на мобильном экране) -->
-        <div id="cells-grid" class="grid grid-cols-2 gap-2.5"></div>
+        <div id="cells-grid" class="grid grid-cols-2 gap-2.5 w-full"></div>
       </section>
 
       <!-- ================================================================= -->
       <!-- ВКЛАДКА 2: ЛИЧНЫЙ КАБИНЕТ (АВТОРИЗАЦИЯ SUPABASE + OTP-КОД)        -->
       <!-- ================================================================= -->
-      <section id="tab-cabinet" class="hidden space-y-3">
+      <section id="tab-cabinet" class="hidden space-y-3 w-full">
         <!-- ЭКРАН 2А: Вход и регистрация -->
         <div id="cab-login-screen" class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-4">
           <div class="grid grid-cols-2 gap-1.5 bg-vv-bg border border-vv-border rounded-xl p-1">
@@ -470,10 +477,10 @@
               <button
                 id="cab-btn-test-finish"
                 type="button"
-                onclick="simulateFinishCharging()"
+                onclick="finishChargingAndPickup()"
                 class="w-full py-2.5 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-xs font-semibold text-vv-charged transition"
               >
-                Симулировать завершение сессии (Реле OFF)
+                Завершить зарядку и забрать телефон
               </button>
             </div>
 
@@ -548,7 +555,7 @@
 
     <!-- =================================================================== -->
     <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ (TAB BAR)                                   -->
-    <!-- =================================================================== -->
+    <!-- ================================================================= -->
     <nav class="shrink-0 bg-vv-card/95 backdrop-blur-md border-t border-vv-border px-3 py-2 grid grid-cols-2 gap-2 z-20">
       <button
         id="nav-btn-cells"
@@ -1046,7 +1053,7 @@
         const btn = document.getElementById(`filter-btn-${f}`);
         if (!btn) return;
         if (f === filter) {
-          btn.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime text-vv-bg transition shrink-0';
+          btn.className = 'px-3 py-1.5 rounded-full text-xs font-bold bg-vv-lime border border-transparent text-vv-bg transition shrink-0';
         } else {
           btn.className = 'px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0';
         }
@@ -1129,7 +1136,7 @@
         <button
           type="button"
           onclick="handleCellCardClick(${cell.floor}, ${cell.id})"
-          class="bg-vv-card hover:bg-vv-elevated active:scale-[0.98] border ${borderClass} rounded-2xl p-3 text-left transition flex flex-col justify-between gap-2.5"
+          class="bg-vv-card hover:bg-vv-elevated active:scale-[0.98] border ${borderClass} rounded-2xl p-3 text-left transition flex flex-col justify-between gap-2.5 min-w-0"
         >
           <div class="flex items-center justify-between gap-1.5 w-full">
             <span class="text-sm font-extrabold text-vv-text">#${cell.id}</span>
@@ -1718,7 +1725,7 @@
       const relayPill = document.getElementById('cab-relay-pill');
       const timerEl = document.getElementById('cab-timer-hms');
       const subEl = document.getElementById('cab-charge-substatus');
-      const testFinishBtn = document.getElementById('cab-btn-test-finish');
+      const finishBtn = document.getElementById('cab-btn-test-finish');
 
       const keyRow = document.getElementById('cab-mqtt-key-row');
       if (myCell.activeKey && myCell.activeKey !== '-') {
@@ -1734,7 +1741,8 @@
         timerEl.className = 'text-2xl font-mono font-extrabold text-vv-charged shrink-0';
         timerEl.textContent = '00:00:00';
         subEl.textContent = 'Сессия завершена • Реле OFF';
-        testFinishBtn.classList.add('hidden');
+        finishBtn.textContent = 'Забрать телефон по коду';
+        finishBtn.classList.remove('hidden');
       } else {
         relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-free/15 border border-vv-free/30 text-[11px] font-mono font-bold text-vv-free shrink-0';
         relayPill.textContent = myCell.relayOn ? 'Реле ON' : 'Ожидание двери';
@@ -1743,25 +1751,43 @@
         subEl.textContent = myCell.door === 'OPEN'
           ? 'Закройте дверцу ячейки для запуска'
           : 'Питание подано • Реле ON';
-        testFinishBtn.classList.remove('hidden');
+        finishBtn.textContent = 'Завершить зарядку и забрать телефон';
+        finishBtn.classList.remove('hidden');
       }
 
       renderOtpBox();
     }
 
-    function simulateFinishCharging() {
+    function finishChargingAndPickup() {
       if (!user) return;
       const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
       if (!myCell) return;
 
-      myCell.status = 'charged';
-      myCell.remainingSec = 0;
-      myCell.relayOn = false;
+      const wasCharging = myCell.status !== 'charged';
+      if (wasCharging) {
+        myCell.status = 'charged';
+        myCell.remainingSec = 0;
+        myCell.relayOn = false;
 
-      if (myCell.isHardware) {
-        hwState.status = 'EXPIRED';
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'EXPIRED');
-        updateTelemetrySheetData();
+        if (myCell.isHardware) {
+          hwState.status = 'EXPIRED';
+          publishHardwareTopic(MQTT_TOPICS.STATUS, 'EXPIRED');
+          updateTelemetrySheetData();
+        }
+      }
+
+      // Если одноразовый код ещё не создан или истёк — автоматически генерируем его
+      if (!otp.code || otp.expired || otp.remainingSec <= 0) {
+        otp.code = String(Math.floor(100000 + Math.random() * 900000));
+        otp.remainingSec = otp.durationMin * 60;
+        otp.expired = false;
+
+        myCell.activeKey = otp.code;
+        if (myCell.isHardware) {
+          hwState.key = otp.code;
+          publishHardwareTopic(MQTT_TOPICS.KEY, otp.code);
+          updateTelemetrySheetData();
+        }
       }
 
       saveCellsLocal();
@@ -1769,7 +1795,15 @@
       syncUserStateToSupabase();
       renderCabinetTab();
       renderCellsTab();
-      showToast(`Ячейка #${myCell.id} (${myCell.floor} этаж): завершено`, 'Реле автоматически отключило питание.', 'free');
+
+      if (wasCharging) {
+        showToast(
+          `Зарядка завершена • Код ${otp.code}`,
+          'Реле отключило питание. Введите код на терминале шкафчика, чтобы забрать телефон.',
+          'free'
+        );
+      }
+      openPickupSheet();
     }
 
     function selectOtpDuration(minutes) {
