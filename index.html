@@ -264,7 +264,7 @@
             </div>
             <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
               <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">8</div>
-              <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Заняты</div>
             </div>
           </div>
         </div>
@@ -469,6 +469,15 @@
                 </div>
                 <span id="cab-timer-hms" class="text-2xl font-mono font-extrabold text-vv-charging shrink-0">01:30:00</span>
               </div>
+
+              <button
+                id="cab-btn-close-door"
+                type="button"
+                onclick="closeDoorAndStartCharging()"
+                class="hidden w-full py-2.5 px-3 rounded-xl bg-vv-lime hover:bg-vv-limeHover text-vv-bg text-xs font-extrabold transition"
+              >
+                Закрыть дверцу и начать зарядку
+              </button>
 
               <button
                 id="cab-btn-test-finish"
@@ -813,6 +822,7 @@
       FLOORS.forEach((floor) => {
         const defaults = buildDefaultFloorCells(floor);
         if (savedMap && Array.isArray(savedMap[floor]) && savedMap[floor].length === CELLS_PER_FLOOR) {
+          const validStatuses = ['free', 'charging', 'awaiting_pickup'];
           cellsByFloor[floor] = defaults.map((defCell, idx) => {
             // Ячейка #1 на 5 этаже всегда управляется живым сигналом симуляции
             if (floor === 5 && defCell.id === 1) return defCell;
@@ -820,7 +830,7 @@
             if (!saved) return defCell;
             return {
               ...defCell,
-              status: saved.status === 'charging' ? 'charging' : 'free',
+              status: validStatuses.includes(saved.status) ? saved.status : 'free',
               door: saved.door === 'OPEN' ? 'OPEN' : 'CLOSED',
               remainingSec: Number(saved.remainingSec) || 0,
               relayOn: Boolean(saved.relayOn),
@@ -1074,15 +1084,57 @@
         let bottomText = 'Нажмите, чтобы занять';
 
         if (isMine) {
-          cardBorder = 'border-vv-lime/60 shadow-md shadow-vv-lime/5';
-          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-lime/20 border border-vv-lime/40 text-[10px] font-extrabold text-vv-lime">Ваша • Заряд</span>';
+          if (cell.status === 'awaiting_pickup') {
+            cardBorder = 'border-vv-charged/60 shadow-md shadow-vv-charged/5';
+            badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charged/20 border border-vv-charged/40 text-[10px] font-extrabold text-vv-charged">Ваша • Выдача</span>';
+            middleRowHtml = `
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-vv-muted">Таймер</span>
+                <span class="font-mono font-bold text-vv-charged">00:00:00</span>
+              </div>
+            `;
+            bottomText = 'Ожидает выдачи';
+          } else if (cell.door === 'OPEN') {
+            cardBorder = 'border-vv-lime/60 shadow-md shadow-vv-lime/5';
+            badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-lime/20 border border-vv-lime/40 text-[10px] font-extrabold text-vv-lime">Ваша • Открыта</span>';
+            middleRowHtml = `
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-vv-muted">Таймер</span>
+                <span class="font-mono font-bold text-vv-muted">${formatSecondsHMS(cell.remainingSec)}</span>
+              </div>
+            `;
+            bottomText = 'Закройте дверцу для старта';
+          } else {
+            cardBorder = 'border-vv-lime/60 shadow-md shadow-vv-lime/5';
+            badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-lime/20 border border-vv-lime/40 text-[10px] font-extrabold text-vv-lime">Ваша • Заряд</span>';
+            middleRowHtml = `
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-vv-muted">Таймер</span>
+                <span class="font-mono font-bold text-vv-charging">${formatSecondsHMS(cell.remainingSec)}</span>
+              </div>
+            `;
+            bottomText = 'Заряжается';
+          }
+        } else if (cell.status === 'awaiting_pickup') {
+          cardBorder = 'border-vv-border hover:border-vv-charged/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charged/15 border border-vv-charged/30 text-[10px] font-bold text-vv-charged">Ожидает выдачи</span>';
           middleRowHtml = `
             <div class="flex items-center justify-between text-[11px]">
               <span class="text-vv-muted">Таймер</span>
-              <span class="font-mono font-bold text-vv-charging">${formatSecondsHMS(cell.remainingSec)}</span>
+              <span class="font-mono font-bold text-vv-charged">00:00:00</span>
             </div>
           `;
-          bottomText = 'Заряжается';
+          bottomText = 'Питание отключено';
+        } else if (!isFree && cell.door === 'OPEN') {
+          cardBorder = 'border-vv-border hover:border-vv-charging/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 border border-vv-charging/30 text-[10px] font-bold text-vv-charging">Открыта</span>';
+          middleRowHtml = `
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-vv-muted">Таймер</span>
+              <span class="font-mono font-bold text-vv-muted">${formatSecondsHMS(cell.remainingSec)}</span>
+            </div>
+          `;
+          bottomText = 'Ожидает закрытия дверцы';
         } else if (!isFree) {
           cardBorder = 'border-vv-border hover:border-vv-charging/40';
           badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 border border-vv-charging/30 text-[10px] font-bold text-vv-charging">Заряжается</span>';
@@ -1216,9 +1268,9 @@
       }
 
       cell.status = 'charging';
-      cell.door = 'CLOSED';
+      cell.door = 'OPEN';
       cell.remainingSec = MAX_CHARGE_SEC;
-      cell.relayOn = true;
+      cell.relayOn = false;
       cell.ownerId = user.id;
       cell.activeKey = null;
 
@@ -1227,10 +1279,10 @@
       otp.expired = false;
 
       if (cell.floor === 5 && cell.id === 1) {
-        hwState.status = 'IN_USE';
-        hwState.door = 'CLOSED';
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE');
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
+        hwState.status = 'OPEN_TO_PUT';
+        hwState.door = 'OPEN';
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN');
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'OPEN_TO_PUT');
       }
 
       closeBottomSheet('sheet-occupy-backdrop');
@@ -1239,7 +1291,29 @@
       syncUserStateToSupabase();
       renderCellsTab();
       switchTab('cabinet');
-      showToast(`Ячейка #${cell.id} занята`, `8 корпус, ${cell.floor} этаж — зарядка запущена.`, 'free');
+      showToast(`Замок ячейки #${cell.id} открыт`, 'Положите телефон и закройте дверцу для старта таймера.', 'free');
+    }
+
+    function closeDoorAndStartCharging() {
+      const cell = getUserActiveCell();
+      if (!cell || cell.status !== 'charging' || cell.door === 'CLOSED') return;
+
+      cell.door = 'CLOSED';
+      cell.relayOn = true;
+      cell.remainingSec = MAX_CHARGE_SEC;
+
+      if (cell.floor === 5 && cell.id === 1) {
+        hwState.status = 'IN_USE';
+        hwState.door = 'CLOSED';
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE');
+      }
+
+      saveCellsLocal();
+      syncCellToSupabase(cell);
+      renderCellsTab();
+      renderCabinetTab();
+      showToast('Дверца закрыта', 'Зарядка и таймер сессии запущены.', 'free');
     }
 
     function finishChargingAndPickup() {
@@ -1533,9 +1607,11 @@
         if (!(f === 5 && cid === 1)) {
           const targetCell = getCell(f, cid);
           if (targetCell) {
-            targetCell.status = 'charging';
+            if (targetCell.status === 'free') {
+              targetCell.status = 'charging';
+              if (targetCell.remainingSec <= 0) targetCell.remainingSec = MAX_CHARGE_SEC;
+            }
             targetCell.ownerId = user.id;
-            if (targetCell.remainingSec <= 0) targetCell.remainingSec = MAX_CHARGE_SEC;
           }
         }
       }
@@ -1647,7 +1723,7 @@
 
         if (error || !Array.isArray(data)) return;
         supabaseDbReady = true;
-
+        const validStatuses = ['free', 'charging', 'awaiting_pickup'];
         data.forEach((row) => {
           const floor = Number(row.floor);
           const id = Number(row.id);
@@ -1655,7 +1731,7 @@
           if (floor === 5 && id === 1) return;
           const cell = getCell(floor, id);
           if (!cell) return;
-          cell.status = row.status === 'charging' ? 'charging' : 'free';
+          cell.status = validStatuses.includes(row.status) ? row.status : 'free';
           cell.door = row.door === 'OPEN' ? 'OPEN' : 'CLOSED';
           cell.remainingSec = Number(row.remaining_sec) || 0;
           cell.relayOn = Boolean(row.relay_on);
@@ -1730,14 +1806,63 @@
       const numEl = document.getElementById('cab-cell-number');
       const titleEl = document.getElementById('cab-cell-title');
       const doorEl = document.getElementById('cab-door-status');
+      const pillEl = document.getElementById('cab-relay-pill');
+      const substatusEl = document.getElementById('cab-charge-substatus');
       const timerEl = document.getElementById('cab-timer-hms');
+      const closeDoorBtn = document.getElementById('cab-btn-close-door');
+      const actionBtn = document.getElementById('cab-btn-test-finish');
       const keyRow = document.getElementById('cab-mqtt-key-row');
       const keyVal = document.getElementById('cab-mqtt-key-val');
+
+      const isAwaiting = activeCell.status === 'awaiting_pickup';
+      const isDoorOpenWaiting = activeCell.status === 'charging' && activeCell.door === 'OPEN';
 
       if (numEl) numEl.textContent = `#${activeCell.id}`;
       if (titleEl) titleEl.textContent = `Ячейка #${activeCell.id} • ${activeCell.floor} этаж`;
       if (doorEl) doorEl.textContent = `${BUILDING_NAME} • Дверь ${activeCell.door === 'OPEN' ? 'открыта' : 'закрыта'}`;
-      if (timerEl) timerEl.textContent = formatSecondsHMS(activeCell.remainingSec);
+
+      if (pillEl) {
+        if (isAwaiting) {
+          pillEl.className = 'px-2.5 py-1 rounded-lg bg-vv-charged/15 border border-vv-charged/30 text-[11px] font-bold text-vv-charged shrink-0';
+          pillEl.textContent = 'Ожидает выдачи';
+        } else if (isDoorOpenWaiting) {
+          pillEl.className = 'px-2.5 py-1 rounded-lg bg-vv-lime/15 border border-vv-lime/30 text-[11px] font-bold text-vv-lime shrink-0';
+          pillEl.textContent = 'Дверь открыта';
+        } else {
+          pillEl.className = 'px-2.5 py-1 rounded-lg bg-vv-charging/15 border border-vv-charging/30 text-[11px] font-bold text-vv-charging shrink-0';
+          pillEl.textContent = 'Заряжается';
+        }
+      }
+
+      if (substatusEl) {
+        if (isAwaiting) {
+          substatusEl.textContent = 'Питание отключено • Ожидает выдачи';
+        } else if (isDoorOpenWaiting) {
+          substatusEl.textContent = 'Закройте дверцу — таймер запустится';
+        } else {
+          substatusEl.textContent = 'Заряжается';
+        }
+      }
+
+      if (timerEl) {
+        const timerColor = isAwaiting ? 'text-vv-charged' : (isDoorOpenWaiting ? 'text-vv-muted' : 'text-vv-charging');
+        timerEl.className = `text-2xl font-mono font-extrabold ${timerColor} shrink-0`;
+        timerEl.textContent = formatSecondsHMS(activeCell.remainingSec);
+      }
+
+      if (closeDoorBtn) {
+        if (isDoorOpenWaiting) {
+          closeDoorBtn.classList.remove('hidden');
+        } else {
+          closeDoorBtn.classList.add('hidden');
+        }
+      }
+
+      if (actionBtn) {
+        actionBtn.textContent = isAwaiting
+          ? 'Открыть ячейку и забрать телефон'
+          : 'Завершить зарядку и забрать телефон';
+      }
 
       const displayCode = otp.code || activeCell.activeKey;
       if (keyRow && keyVal) {
@@ -1862,7 +1987,7 @@
       const topics = Object.keys(pendingMqttPublishes);
       topics.forEach((topic) => {
         try {
-          mqttClient.publish(topic, String(pendingMqttPublishes[topic]), { retain: false });
+          mqttClient.publish(topic, String(pendingMqttPublishes[topic]), { retain: true });
           delete pendingMqttPublishes[topic];
         } catch (e) {}
       });
@@ -1949,7 +2074,7 @@
       const strPayload = String(payload);
       if (mqttClient && mqttClient.connected) {
         try {
-          mqttClient.publish(topic, strPayload, { retain: false });
+          mqttClient.publish(topic, strPayload, { retain: true });
           return;
         } catch (e) {}
       }
@@ -1964,20 +2089,45 @@
       hwCell.door = upperDoor === 'OPEN' ? 'OPEN' : 'CLOSED';
       hwCell.activeKey = rawKey && rawKey !== '-' && rawKey.toUpperCase() !== 'NONE' ? rawKey : null;
 
-      if (upperStatus === 'IN_USE' || upperStatus === 'OCCUPIED' || upperStatus === 'CHARGING' || upperStatus === 'BUSY') {
+      if (upperStatus === 'OPEN_TO_PUT') {
+        hwCell.status = 'charging';
+        hwCell.door = 'OPEN';
+        hwCell.relayOn = false;
+        if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
+        if (user && !hwCell.ownerId) {
+          hwCell.ownerId = user.id;
+        }
+      } else if (upperStatus === 'IN_USE' || upperStatus === 'OCCUPIED' || upperStatus === 'CHARGING' || upperStatus === 'BUSY') {
         hwCell.status = 'charging';
         if (user && !hwCell.ownerId) {
           hwCell.ownerId = user.id;
         }
         if (hwCell.door === 'OPEN') {
           hwCell.relayOn = false;
+          if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
         } else {
           hwCell.relayOn = true;
           if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
         }
+      } else if (upperStatus === 'OPEN_TO_TAKE') {
+        hwCell.status = 'awaiting_pickup';
+        hwCell.door = 'OPEN';
+        hwCell.remainingSec = 0;
+        hwCell.relayOn = false;
+        if (user && !hwCell.ownerId) {
+          hwCell.ownerId = user.id;
+        }
+      } else if (upperStatus === 'AWAITING_PICKUP' || upperStatus === 'EXPIRED') {
+        hwCell.status = 'awaiting_pickup';
+        hwCell.remainingSec = 0;
+        hwCell.relayOn = false;
+        if (user && !hwCell.ownerId) {
+          hwCell.ownerId = user.id;
+        }
       } else {
         const wasMine = user && hwCell.ownerId === user.id;
         hwCell.status = 'free';
+        hwCell.door = 'CLOSED';
         hwCell.remainingSec = 0;
         hwCell.relayOn = false;
         hwCell.ownerId = null;
@@ -2009,6 +2159,13 @@
         statusEl.textContent = 'Свободна';
         actionBtn.textContent = user ? 'Занять Ячейку #1' : 'Войти и занять Ячейку #1';
         if (resetFreeBtn) resetFreeBtn.classList.add('hidden');
+      } else if (hwCell.status === 'awaiting_pickup') {
+        statusEl.className = 'font-bold text-vv-charged';
+        statusEl.textContent = 'Ожидает выдачи';
+        actionBtn.textContent = (user && hwCell.ownerId === user.id)
+          ? 'Открыть ячейку и забрать телефон'
+          : 'Открыть в личном кабинете';
+        if (resetFreeBtn) resetFreeBtn.classList.remove('hidden');
       } else {
         statusEl.className = 'font-bold text-vv-charging';
         statusEl.textContent = 'Заряжается';
@@ -2033,33 +2190,26 @@
         FLOORS.forEach((floor) => {
           const list = getFloorCells(floor);
           list.forEach((cell) => {
-            if (cell.status !== 'free' && cell.remainingSec > 0) {
+            if (cell.status === 'charging' && cell.door === 'CLOSED' && cell.remainingSec > 0) {
               cell.remainingSec -= 1;
               cellsChanged = true;
 
               if (cell.remainingSec <= 0) {
                 const wasMine = user && cell.ownerId === user.id;
-                cell.status = 'free';
+                cell.status = 'awaiting_pickup';
                 cell.door = 'CLOSED';
                 cell.remainingSec = 0;
                 cell.relayOn = false;
-                cell.activeKey = null;
-                cell.ownerId = null;
 
                 if (floor === 5 && cell.id === 1) {
-                  hwState.status = 'FREE';
+                  hwState.status = 'AWAITING_PICKUP';
                   hwState.door = 'CLOSED';
-                  hwState.key = '-';
-                  publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-                  publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+                  publishHardwareTopic(MQTT_TOPICS.STATUS, 'AWAITING_PICKUP');
                 }
 
                 if (wasMine) {
-                  otp.code = null;
-                  otp.remainingSec = 0;
-                  otp.expired = false;
                   syncUserStateToSupabase();
-                  showToast('Время зарядки вышло', `Ячейка #${cell.id} снова свободна.`, 'free');
+                  showToast('Ожидает выдачи', `Время зарядки вышло, питание отключено. Заберите устройство из ячейки #${cell.id}.`, 'info');
                 }
                 syncCellToSupabase(cell);
               }
@@ -2098,17 +2248,23 @@
     // Закрытие выпадающего списка при клике вне него
     document.addEventListener('click', (e) => {
       const wrapper = document.getElementById('building-dropdown-wrapper');
-      if (wrapper && !wrapper.contains(e.target)) {
+      if (wrapper && !wrapper.contains(e.target) && isFloorDropdownOpen) {
         closeFloorDropdown();
       }
     });
 
-    // Переподключение канала при возврате на вкладку с симуляции
+    // Переподключение и повторная подписка при возврате на вкладку с симуляции
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && mqttClient && !mqttClient.connected) {
-        try {
-          mqttClient.reconnect();
-        } catch (e) {}
+      if (document.visibilityState === 'visible' && mqttClient) {
+        if (mqttClient.connected) {
+          try {
+            mqttClient.subscribe(['locker_project/#', MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY]);
+          } catch (e) {}
+        } else {
+          try {
+            mqttClient.reconnect();
+          } catch (e) {}
+        }
       }
     });
 
