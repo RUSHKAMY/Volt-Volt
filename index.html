@@ -13,8 +13,8 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- MQTT.js для подключения к HiveMQ по WebSocket (с резервным CDN) -->
-  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.1/mqtt.min.js';"></script>
+  <!-- MQTT.js для подключения к HiveMQ по WebSocket (jsDelivr + резервный unpkg) -->
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js';"></script>
 
   <!-- Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1869,7 +1869,12 @@
     }
 
     function initMqtt() {
-      if (!window.mqtt) return;
+      if (!window.mqtt) {
+        setTimeout(initMqtt, 300);
+        return;
+      }
+      if (mqttClient) return;
+
       try {
         const clientId = 'voltvolt_pwa_' + Math.random().toString(16).slice(2, 10);
         mqttClient = window.mqtt.connect(MQTT_BROKER_URL, {
@@ -1889,7 +1894,7 @@
           const cleanTopic = String(topic || '').trim().toLowerCase();
           let val = message.toString().trim();
 
-          // Поддержка как текстового формата (FREE / BOX FREE), так и JSON
+          // Поддержка как текстового формата (FREE / IN_USE), так и JSON
           if (val.startsWith('{')) {
             try {
               const parsed = JSON.parse(val);
@@ -1925,6 +1930,7 @@
             const wasOccupied = hwCell.status !== 'free';
             applyHardwareStateToCell(hwCell);
             saveCellsLocal();
+            syncCellToSupabase(hwCell);
             updateTelemetrySheetData();
             renderCellsTab();
             renderCabinetTab();
