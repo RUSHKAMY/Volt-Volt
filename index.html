@@ -492,6 +492,64 @@
               </div>
 
               <div class="grid grid-cols-2 gap-2">
+            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
+              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">40</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Свободно</div>
+            </div>
+            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
+              <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">10</div>
+              <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
+            </div>
+          </div>
+        </div>
+            <!-- Мониторинг заряда -->
+            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div id="cab-cell-number" class="w-10 h-10 rounded-xl bg-vv-lime/15 border border-vv-lime/30 text-vv-lime font-extrabold text-sm flex items-center justify-center shrink-0">
+                    #1
+                  </div>
+                  <div class="min-w-0">
+                    <div id="cab-cell-title" class="text-sm font-extrabold text-vv-text truncate">Ячейка #1 • 5 этаж</div>
+                    <div id="cab-door-status" class="text-[11px] text-vv-muted truncate">8 корпус • Дверь закрыта</div>
+                  </div>
+                </div>
+                <span id="cab-relay-pill" class="px-2.5 py-1 rounded-lg bg-vv-charging/15 border border-vv-charging/30 text-[11px] font-bold text-vv-charging shrink-0">
+                  Заряжается
+                </span>
+              </div>
+
+              <div id="cab-mqtt-key-row" class="hidden px-3 py-1.5 rounded-xl bg-vv-bg border border-vv-border flex items-center justify-between text-xs">
+                <span class="text-vv-muted">Код получения:</span>
+                <span id="cab-mqtt-key-val" class="font-mono font-bold text-vv-lime">—</span>
+              </div>
+
+              <div class="bg-vv-bg border border-vv-border rounded-xl p-3 flex items-center justify-between gap-2">
+                <div>
+                  <div class="text-[11px] text-vv-muted">Осталось времени сессии</div>
+                  <div id="cab-charge-substatus" class="text-xs font-semibold text-vv-text mt-0.5">Заряжается</div>
+                </div>
+                <span id="cab-timer-hms" class="text-2xl font-mono font-extrabold text-vv-charging shrink-0">01:30:00</span>
+              </div>
+
+              <button
+                id="cab-btn-test-finish"
+                type="button"
+                onclick="finishChargingAndPickup()"
+                class="w-full py-2.5 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-xs font-semibold text-vv-charged transition"
+              >
+                Завершить зарядку и забрать телефон
+              </button>
+            </div>
+
+            <!-- Генератор одноразового кода получения (10 / 15 минут) -->
+            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3">
+              <div>
+                <h3 class="text-sm font-extrabold text-vv-text">Одноразовый код получения</h3>
+                <p class="text-[11px] text-vv-muted mt-0.5">Создайте временный PIN-код для открытия ячейки на шкафчике</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
                 <button
                   id="otp-dur-10"
                   type="button"
@@ -511,6 +569,7 @@
               </div>
 
               <button
+                id="generate-otp-btn"
                 type="button"
                 onclick="generatePickupOtp()"
                 class="w-full py-3 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-xs transition"
@@ -539,13 +598,9 @@
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onclick="openPickupSheet()"
-                  class="w-full py-2.5 px-3 rounded-xl bg-vv-free/15 hover:bg-vv-free/25 border border-vv-free/30 text-xs font-bold text-vv-free transition"
-                >
-                  Ввести код на терминале и забрать телефон
-                </button>
+                <div class="w-full py-2.5 px-3 rounded-xl bg-vv-card border border-vv-border text-center text-xs font-semibold text-vv-muted">
+                  Введите этот код на терминале
+                </div>
               </div>
             </div>
           </div>
@@ -607,7 +662,7 @@
         <!-- Контент шторки для АВТОРИЗОВАННОГО пользователя -->
         <div id="sheet-occupy-auth-content" class="hidden space-y-3">
           <p class="text-xs text-vv-muted leading-relaxed">
-            Замок откроется автоматически. Положите смартфон внутрь, подключите кабель и закройте дверцу — реле подаст питание.
+            Замок откроется автоматически. Положите смартфон внутрь, подключите кабель и закройте дверцу — начнётся зарядка.
           </p>
           <button
             onclick="confirmOccupySelectedCell()"
@@ -633,7 +688,7 @@
     </div>
 
     <!-- =================================================================== -->
-    <!-- BOTTOM SHEET 2: ЖИВАЯ ТЕЛЕМЕТРИЯ ESP32 / MQTT ДЛЯ ЯЧЕЙКИ #1         -->
+    <!-- BOTTOM SHEET 2: ИНФОРМАЦИЯ О ЯЧЕЙКЕ #1                              -->
     <!-- =================================================================== -->
     <div id="sheet-telemetry-backdrop" onclick="closeBottomSheet('sheet-telemetry-backdrop')" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-[2px] flex-col justify-end">
       <div onclick="event.stopPropagation()" class="bg-vv-card border-t border-vv-border rounded-t-3xl p-5 pb-safe animate-sheet-up space-y-4 max-h-[88dvh] overflow-y-auto app-scroll">
@@ -645,11 +700,8 @@
               #1
             </div>
             <div>
-              <div class="flex items-center gap-1.5">
-                <h3 class="text-base font-extrabold text-vv-text">Ячейка #1</h3>
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-vv-lime/15 text-vv-lime border border-vv-lime/25">MQTT</span>
-              </div>
-              <p class="text-xs text-vv-muted">8 корпус • 5 этаж • Синхронизация HiveMQ</p>
+              <h3 class="text-base font-extrabold text-vv-text">Ячейка #1</h3>
+              <p class="text-xs text-vv-muted">8 корпус • 5 этаж</p>
             </div>
           </div>
           <button onclick="closeBottomSheet('sheet-telemetry-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
@@ -659,22 +711,18 @@
           </button>
         </div>
 
-        <!-- Таблица живых параметров телеметрии -->
+        <!-- Параметры ячейки -->
         <div class="bg-vv-bg border border-vv-border rounded-2xl p-3.5 space-y-2.5 text-xs">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-vv-muted">Статус (status):</span>
-            <span id="tel-status-val" class="font-bold text-vv-free">Свободна (FREE)</span>
+            <span class="text-vv-muted">Статус:</span>
+            <span id="tel-status-val" class="font-bold text-vv-free">Свободна</span>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-vv-muted">Замок дверцы (door):</span>
-            <span id="tel-door-val" class="font-semibold text-vv-text">Закрыта (CLOSED)</span>
+            <span class="text-vv-muted">Замок дверцы:</span>
+            <span id="tel-door-val" class="font-semibold text-vv-text">Закрыта</span>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-vv-muted">Питание (Реле GPIO 27):</span>
-            <span id="tel-relay-val" class="font-mono font-bold text-vv-muted">Реле OFF • Готово</span>
-          </div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-vv-muted">Активный ключ (key):</span>
+            <span class="text-vv-muted">Код получения:</span>
             <span id="tel-key-val" class="font-mono font-bold text-vv-lime">—</span>
           </div>
           <div class="flex items-center justify-between gap-2 pt-2 border-t border-vv-border">
@@ -683,42 +731,7 @@
           </div>
         </div>
 
-        <!-- Быстрый тест цикла Wokwi прямо из шторки -->
-        <div class="space-y-2">
-          <span class="block text-[11px] font-bold uppercase tracking-wider text-vv-muted">Тест шагов стенда ESP32 / Wokwi</span>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              onclick="simulateHardwareStep('step1_open')"
-              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
-            >
-              <div class="text-[11px] font-bold text-vv-lime">1. Открыть замок</div>
-              <div class="text-[10px] font-mono text-vv-muted">IN_USE • OPEN</div>
-            </button>
-            <button
-              onclick="simulateHardwareStep('step2_charge')"
-              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
-            >
-              <div class="text-[11px] font-bold text-vv-charging">2. Закрыть и заряжать</div>
-              <div class="text-[10px] font-mono text-vv-muted">IN_USE • CLOSED</div>
-            </button>
-            <button
-              onclick="simulateHardwareStep('step3_expired')"
-              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
-            >
-              <div class="text-[11px] font-bold text-vv-charged">3. Время вышло (EXPIRED)</div>
-              <div class="text-[10px] font-mono text-vv-muted">EXPIRED • RELAY OFF</div>
-            </button>
-            <button
-              onclick="simulateHardwareStep('step4_free')"
-              class="py-2 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-left transition active:scale-95"
-            >
-              <div class="text-[11px] font-bold text-vv-free">4. Освободить ячейку</div>
-              <div class="text-[10px] font-mono text-vv-muted">FREE • CLOSED</div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Кнопка перехода в кабинет или бронирования, если Ячейка #1 свободна -->
+        <!-- Кнопка действия -->
         <button
           id="tel-action-btn"
           onclick="handleTelemetrySheetAction()"
@@ -726,45 +739,6 @@
         >
           Занять Ячейку #1
         </button>
-      </div>
-    </div>
-
-    <!-- =================================================================== -->
-    <!-- BOTTOM SHEET 3: ВВОД КОДА НА ШКАФЧИКЕ (ЗАБРАТЬ ТЕЛЕФОН)              -->
-    <!-- =================================================================== -->
-    <div id="sheet-pickup-backdrop" onclick="closeBottomSheet('sheet-pickup-backdrop')" class="hidden absolute inset-0 z-40 bg-black/70 backdrop-blur-[2px] flex-col justify-end">
-      <div onclick="event.stopPropagation()" class="bg-vv-card border-t border-vv-border rounded-t-3xl p-5 pb-safe animate-sheet-up space-y-4">
-        <div class="w-10 h-1 rounded-full bg-vv-border mx-auto"></div>
-
-        <div class="flex items-center justify-between gap-2">
-          <div>
-            <h3 class="text-base font-extrabold text-vv-text">Терминал выдачи</h3>
-            <p class="text-xs text-vv-muted">Введите 6-значный код из личного кабинета</p>
-          </div>
-          <button onclick="closeBottomSheet('sheet-pickup-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onsubmit="verifyPickupCode(event)" class="space-y-3">
-          <input
-            id="pickup-code-input"
-            type="text"
-            inputmode="numeric"
-            maxlength="6"
-            required
-            placeholder="000000"
-            class="w-full bg-vv-bg border border-vv-border focus:border-vv-lime rounded-2xl px-4 py-3.5 text-center text-2xl font-mono font-extrabold tracking-[0.25em] text-vv-lime outline-none"
-          />
-          <button
-            type="submit"
-            class="w-full py-3.5 px-4 rounded-2xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-sm transition"
-          >
-            Подтвердить код и открыть замок
-          </button>
-        </form>
       </div>
     </div>
   </div>
@@ -861,13 +835,10 @@
       const map = {};
       const busyTemplate = {
         2: { status: 'charging', remainingSec: 1920, relayOn: true },
-        4: { status: 'charged', remainingSec: 0, relayOn: false },
         6: { status: 'charging', remainingSec: 3315, relayOn: true },
         9: { status: 'charging', remainingSec: 1120, relayOn: true },
-        12: { status: 'charged', remainingSec: 0, relayOn: false },
         15: { status: 'charging', remainingSec: 4100, relayOn: true },
         19: { status: 'charging', remainingSec: 2450, relayOn: true },
-        24: { status: 'charged', remainingSec: 0, relayOn: false },
         31: { status: 'charging', remainingSec: 3680, relayOn: true },
         38: { status: 'charging', remainingSec: 640, relayOn: true }
       };
@@ -926,6 +897,27 @@
         const parsed = JSON.parse(raw);
         if (parsed && parsed[5] && Array.isArray(parsed[5]) && parsed[5].length === CELLS_PER_FLOOR) {
           cellsByFloor = parsed;
+          // Ячейка #1 на 5 этаже всегда стартует как свободная и ждёт живой сигнал от симуляции
+          const hwCell = getHardwareCell();
+          if (hwCell) {
+            hwCell.isHardware = true;
+            hwCell.status = 'free';
+            hwCell.door = 'CLOSED';
+            hwCell.remainingSec = 0;
+            hwCell.relayOn = false;
+            hwCell.activeKey = null;
+            hwCell.ownerId = null;
+          }
+          // Переводим устаревший статус 'charged' в 'free'
+          getAllCells().forEach((c) => {
+            if (c.status === 'charged') {
+              c.status = 'free';
+              c.remainingSec = 0;
+              c.relayOn = false;
+              c.activeKey = null;
+              c.ownerId = null;
+            }
+          });
           return true;
         }
       } catch (e) {
@@ -1064,15 +1056,12 @@
     function renderCellsTab() {
       const cells = cellsByFloor[selectedFloor] || [];
       const freeCount = cells.filter((c) => c.status === 'free').length;
-      const chargingCount = cells.filter((c) => c.status === 'charging').length;
-      const chargedCount = cells.filter((c) => c.status === 'charged').length;
-      const busyCount = chargingCount + chargedCount;
+      const busyCount = cells.filter((c) => c.status !== 'free').length;
 
       document.getElementById('summary-floor-label').textContent = `Состояние ячеек • ${selectedFloor} этаж`;
       document.getElementById('summary-free-ratio').textContent = `${freeCount} / ${CELLS_PER_FLOOR} свободно`;
       document.getElementById('stat-free').textContent = freeCount;
-      document.getElementById('stat-charging').textContent = chargingCount;
-      document.getElementById('stat-charged').textContent = chargedCount;
+      document.getElementById('stat-charging').textContent = busyCount;
 
       document.getElementById('filter-count-all').textContent = CELLS_PER_FLOOR;
       document.getElementById('filter-count-free').textContent = freeCount;
@@ -1106,12 +1095,12 @@
         badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[10px] font-bold text-vv-free whitespace-nowrap">Свободна</span>`;
         infoRowHtml = `
           <div class="flex items-center justify-between text-[11px]">
-            <span class="text-vv-muted">Питание</span>
-            <span class="font-bold text-vv-free">Готова • 5V</span>
+            <span class="text-vv-muted">Состояние</span>
+            <span class="font-bold text-vv-free">Готова</span>
           </div>
         `;
         footerText = 'Нажмите, чтобы занять';
-      } else if (cell.status === 'charging') {
+      } else {
         badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 border border-vv-charging/30 text-[10px] font-bold text-vv-charging whitespace-nowrap">${isMine ? 'Ваша • Заряд' : 'Заряжается'}</span>`;
         const timerStr = cell.door === 'OPEN' ? '--:--:--' : formatSecondsHMS(cell.remainingSec);
         infoRowHtml = `
@@ -1120,16 +1109,7 @@
             <span class="font-mono font-bold text-vv-charging">${timerStr}</span>
           </div>
         `;
-        footerText = cell.door === 'OPEN' ? 'Ожидание закрытия дверцы' : 'Питание подано • Реле ON';
-      } else {
-        badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-vv-charged/15 border border-vv-charged/30 text-[10px] font-bold text-vv-charged whitespace-nowrap">${isMine ? 'Ваша • Готово' : 'Завершено'}</span>`;
-        infoRowHtml = `
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="text-vv-muted">Таймер</span>
-            <span class="font-mono font-bold text-vv-charged">00:00:00</span>
-          </div>
-        `;
-        footerText = 'Ток отключён • Реле OFF';
+        footerText = cell.door === 'OPEN' ? 'Ожидание закрытия дверцы' : 'Заряжается';
       }
 
       return `
@@ -1215,14 +1195,6 @@
       backdrop.classList.add('flex');
     }
 
-    function openPickupSheet() {
-      const input = document.getElementById('pickup-code-input');
-      if (input) input.value = '';
-      const backdrop = document.getElementById('sheet-pickup-backdrop');
-      backdrop.classList.remove('hidden');
-      backdrop.classList.add('flex');
-    }
-
     function closeBottomSheet(backdropId) {
       const backdrop = document.getElementById(backdropId);
       if (!backdrop) return;
@@ -1275,7 +1247,7 @@
 
       closeBottomSheet('sheet-occupy-backdrop');
       renderCellsTab();
-      showToast(`Ячейка #${cell.id} (${cell.floor} этаж)`, 'Замок открыт, питание 5V подано на 90 минут.', 'free');
+      showToast(`Ячейка #${cell.id} (${cell.floor} этаж)`, 'Замок открыт, телефон поставлен на зарядку.', 'free');
       switchTab('cabinet');
     }
 
@@ -1291,6 +1263,8 @@
       if (hwCell && hwCell.status === 'free') {
         pendingOccupyTarget = { floor: 5, id: 1 };
         confirmOccupySelectedCell();
+      } else if (hwCell && hwCell.ownerId === user.id) {
+        finishChargingAndPickup();
       } else {
         switchTab('cabinet');
       }
@@ -1445,8 +1419,11 @@
     function restoreUserBindingFromMeta(meta) {
       if (!user || !meta) return;
       if (meta.vv_cell_floor && meta.vv_cell_id) {
-        const cell = getCell(Number(meta.vv_cell_floor), Number(meta.vv_cell_id));
-        if (cell) {
+        const floor = Number(meta.vv_cell_floor);
+        const id = Number(meta.vv_cell_id);
+        // Для Ячейки #1 на 5 этаже источником истины является MQTT симуляция, не перезаписываем её из кэша
+        const cell = getCell(floor, id);
+        if (cell && !cell.isHardware) {
           cell.ownerId = user.id;
           if (cell.status === 'free') {
             cell.status = 'charging';
@@ -1488,12 +1465,13 @@
         const floor = Number(row.floor || 5);
         const cell = getCell(floor, row.id);
         if (cell && !cell.isHardware) {
-          cell.status = row.status || 'free';
+          const remoteStatus = row.status === 'charging' ? 'charging' : 'free';
+          cell.status = remoteStatus;
           cell.door = row.door || 'CLOSED';
-          cell.remainingSec = Number(row.remaining_sec || 0);
-          cell.relayOn = Boolean(row.relay_on);
-          cell.activeKey = row.active_key || null;
-          cell.ownerId = row.owner_id || null;
+          cell.remainingSec = remoteStatus === 'free' ? 0 : Number(row.remaining_sec || 0);
+          cell.relayOn = remoteStatus === 'charging';
+          cell.activeKey = remoteStatus === 'free' ? null : (row.active_key || null);
+          cell.ownerId = remoteStatus === 'free' ? null : (row.owner_id || null);
         }
       });
       renderCellsTab();
@@ -1735,25 +1713,15 @@
         keyRow.classList.add('hidden');
       }
 
-      if (myCell.status === 'charged') {
-        relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-charged/15 border border-vv-charged/30 text-[11px] font-mono font-bold text-vv-charged shrink-0';
-        relayPill.textContent = 'Реле OFF';
-        timerEl.className = 'text-2xl font-mono font-extrabold text-vv-charged shrink-0';
-        timerEl.textContent = '00:00:00';
-        subEl.textContent = 'Сессия завершена • Реле OFF';
-        finishBtn.textContent = 'Забрать телефон по коду';
-        finishBtn.classList.remove('hidden');
-      } else {
-        relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-free/15 border border-vv-free/30 text-[11px] font-mono font-bold text-vv-free shrink-0';
-        relayPill.textContent = myCell.relayOn ? 'Реле ON' : 'Ожидание двери';
-        timerEl.className = 'text-2xl font-mono font-extrabold text-vv-charging shrink-0';
-        timerEl.textContent = myCell.door === 'OPEN' ? '--:--:--' : formatSecondsHMS(myCell.remainingSec);
-        subEl.textContent = myCell.door === 'OPEN'
-          ? 'Закройте дверцу ячейки для запуска'
-          : 'Питание подано • Реле ON';
-        finishBtn.textContent = 'Завершить зарядку и забрать телефон';
-        finishBtn.classList.remove('hidden');
-      }
+      relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-charging/15 border border-vv-charging/30 text-[11px] font-bold text-vv-charging shrink-0';
+      relayPill.textContent = myCell.door === 'OPEN' ? 'Ожидание двери' : 'Заряжается';
+      timerEl.className = 'text-2xl font-mono font-extrabold text-vv-charging shrink-0';
+      timerEl.textContent = myCell.door === 'OPEN' ? '--:--:--' : formatSecondsHMS(myCell.remainingSec);
+      subEl.textContent = myCell.door === 'OPEN'
+        ? 'Закройте дверцу ячейки для запуска'
+        : 'Заряжается';
+      finishBtn.textContent = 'Завершить зарядку и забрать телефон';
+      finishBtn.classList.remove('hidden');
 
       renderOtpBox();
     }
@@ -1763,32 +1731,30 @@
       const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
       if (!myCell) return;
 
-      const wasCharging = myCell.status !== 'charged';
-      if (wasCharging) {
-        myCell.status = 'charged';
-        myCell.remainingSec = 0;
-        myCell.relayOn = false;
+      const cellNum = myCell.id;
+      const cellFloor = myCell.floor;
 
-        if (myCell.isHardware) {
-          hwState.status = 'EXPIRED';
-          publishHardwareTopic(MQTT_TOPICS.STATUS, 'EXPIRED');
-          updateTelemetrySheetData();
-        }
+      // Через приложение ячейка сразу открывается и освобождается
+      myCell.status = 'free';
+      myCell.door = 'OPEN';
+      myCell.remainingSec = 0;
+      myCell.relayOn = false;
+      myCell.activeKey = null;
+      myCell.ownerId = null;
+
+      if (myCell.isHardware) {
+        hwState.status = 'FREE';
+        hwState.door = 'OPEN';
+        hwState.key = '-';
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN');
+        publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+        updateTelemetrySheetData();
       }
 
-      // Если одноразовый код ещё не создан или истёк — автоматически генерируем его
-      if (!otp.code || otp.expired || otp.remainingSec <= 0) {
-        otp.code = String(Math.floor(100000 + Math.random() * 900000));
-        otp.remainingSec = otp.durationMin * 60;
-        otp.expired = false;
-
-        myCell.activeKey = otp.code;
-        if (myCell.isHardware) {
-          hwState.key = otp.code;
-          publishHardwareTopic(MQTT_TOPICS.KEY, otp.code);
-          updateTelemetrySheetData();
-        }
-      }
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
 
       saveCellsLocal();
       syncCellToSupabase(myCell);
@@ -1796,14 +1762,11 @@
       renderCabinetTab();
       renderCellsTab();
 
-      if (wasCharging) {
-        showToast(
-          `Зарядка завершена • Код ${otp.code}`,
-          'Реле отключило питание. Введите код на терминале шкафчика, чтобы забрать телефон.',
-          'free'
-        );
-      }
-      openPickupSheet();
+      showToast(
+        `Ячейка #${cellNum} (${cellFloor} этаж) открыта`,
+        'Замок разблокирован. Заберите телефон и закройте дверцу.',
+        'free'
+      );
     }
 
     function selectOtpDuration(minutes) {
@@ -1825,6 +1788,12 @@
       const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
       if (!myCell) return;
 
+      // Запрещаем бесконечную генерацию кодов, пока текущий код активен
+      if (otp.code && !otp.expired && otp.remainingSec > 0) {
+        showToast('Код уже активен', `Используйте текущий код ${otp.code} или дождитесь окончания таймера.`, 'warn');
+        return;
+      }
+
       otp.code = String(Math.floor(100000 + Math.random() * 900000));
       otp.remainingSec = otp.durationMin * 60;
       otp.expired = false;
@@ -1845,6 +1814,20 @@
 
     function renderOtpBox() {
       const box = document.getElementById('otp-active-box');
+      const genBtn = document.getElementById('generate-otp-btn');
+      const hasActiveOtp = Boolean(otp.code && !otp.expired && otp.remainingSec > 0);
+
+      if (genBtn) {
+        genBtn.disabled = hasActiveOtp;
+        if (hasActiveOtp) {
+          genBtn.className = 'w-full py-3 px-4 rounded-xl bg-vv-bg border border-vv-border text-vv-muted font-bold text-xs cursor-not-allowed opacity-60 transition';
+          genBtn.textContent = 'Код получения уже сгенерирован';
+        } else {
+          genBtn.className = 'w-full py-3 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-xs transition';
+          genBtn.textContent = 'Сгенерировать код получения';
+        }
+      }
+
       if (!box) return;
 
       if (!otp.code) {
@@ -1878,54 +1861,6 @@
       document.execCommand('copy');
       document.body.removeChild(tempInput);
       showToast('Код скопирован', `Одноразовый код ${otp.code} в буфере обмена.`, 'free');
-    }
-
-    function verifyPickupCode(event) {
-      event.preventDefault();
-      const entered = document.getElementById('pickup-code-input').value.trim();
-
-      if (!otp.code || otp.expired || otp.remainingSec <= 0) {
-        showToast('Код недействителен', 'Сгенерируйте новый одноразовый код в кабинете.', 'danger');
-        return;
-      }
-
-      if (entered !== otp.code) {
-        showToast('Неверный код', 'Проверьте 6-значный PIN-код и повторите попытку.', 'danger');
-        return;
-      }
-
-      const myCell = user ? getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free') : null;
-      if (myCell) {
-        myCell.status = 'free';
-        myCell.door = 'CLOSED';
-        myCell.remainingSec = 0;
-        myCell.relayOn = false;
-        myCell.activeKey = null;
-        myCell.ownerId = null;
-
-        if (myCell.isHardware) {
-          hwState.status = 'FREE';
-          hwState.door = 'CLOSED';
-          hwState.key = '-';
-          publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-          publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
-          publishHardwareTopic(MQTT_TOPICS.KEY, '-');
-          updateTelemetrySheetData();
-        }
-
-        saveCellsLocal();
-        syncCellToSupabase(myCell);
-      }
-
-      otp.code = null;
-      otp.remainingSec = 0;
-      otp.expired = false;
-
-      syncUserStateToSupabase();
-      closeBottomSheet('sheet-pickup-backdrop');
-      renderCabinetTab();
-      renderCellsTab();
-      showToast('Замок открыт!', 'Заберите телефон. Ячейка снова свободна.', 'free');
     }
 
     // -----------------------------------------------------------------------
@@ -1969,7 +1904,7 @@
     function publishHardwareTopic(topic, payload) {
       if (mqttClient && mqttClient.connected) {
         try {
-          mqttClient.publish(topic, String(payload), { retain: true });
+          mqttClient.publish(topic, String(payload), { retain: false });
         } catch (e) {}
       }
     }
@@ -1978,12 +1913,7 @@
       hwCell.door = hwState.door === 'OPEN' ? 'OPEN' : 'CLOSED';
       hwCell.activeKey = hwState.key && hwState.key !== '-' ? hwState.key : null;
 
-      if (hwState.status === 'FREE') {
-        hwCell.status = 'free';
-        hwCell.remainingSec = 0;
-        hwCell.relayOn = false;
-        hwCell.ownerId = null;
-      } else if (hwState.status === 'IN_USE') {
+      if (hwState.status === 'IN_USE') {
         hwCell.status = 'charging';
         if (user && !hwCell.ownerId) {
           hwCell.ownerId = user.id;
@@ -1994,43 +1924,16 @@
           hwCell.relayOn = true;
           if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
         }
-      } else if (hwState.status === 'EXPIRED') {
-        hwCell.status = 'charged';
+      } else {
+        // FREE или EXPIRED сразу возвращают ячейку в статус "Свободна"
+        hwCell.status = 'free';
         hwCell.remainingSec = 0;
         hwCell.relayOn = false;
+        hwCell.ownerId = null;
+        if (hwState.status === 'FREE') {
+          hwCell.activeKey = null;
+        }
       }
-    }
-
-    function simulateHardwareStep(step) {
-      const hwCell = getHardwareCell();
-      if (!hwCell) return;
-
-      if (step === 'step1_open') {
-        hwState.status = 'IN_USE';
-        hwState.door = 'OPEN';
-        hwState.key = hwState.key === '-' ? String(Math.floor(1000 + Math.random() * 9000)) : hwState.key;
-      } else if (step === 'step2_charge') {
-        hwState.status = 'IN_USE';
-        hwState.door = 'CLOSED';
-        hwState.key = hwState.key === '-' ? String(Math.floor(1000 + Math.random() * 9000)) : hwState.key;
-      } else if (step === 'step3_expired') {
-        hwState.status = 'EXPIRED';
-        hwState.door = 'CLOSED';
-      } else if (step === 'step4_free') {
-        hwState.status = 'FREE';
-        hwState.door = 'CLOSED';
-        hwState.key = '-';
-      }
-
-      publishHardwareTopic(MQTT_TOPICS.STATUS, hwState.status);
-      publishHardwareTopic(MQTT_TOPICS.DOOR, hwState.door);
-      publishHardwareTopic(MQTT_TOPICS.KEY, hwState.key);
-
-      applyHardwareStateToCell(hwCell);
-      saveCellsLocal();
-      updateTelemetrySheetData();
-      renderCellsTab();
-      renderCabinetTab();
     }
 
     function updateTelemetrySheetData() {
@@ -2039,35 +1942,24 @@
 
       const statusEl = document.getElementById('tel-status-val');
       const doorEl = document.getElementById('tel-door-val');
-      const relayEl = document.getElementById('tel-relay-val');
       const keyEl = document.getElementById('tel-key-val');
       const chargeEl = document.getElementById('tel-charge-timer-val');
       const actionBtn = document.getElementById('tel-action-btn');
 
       if (hwCell.status === 'free') {
         statusEl.className = 'font-bold text-vv-free';
-        statusEl.textContent = 'Свободна (FREE)';
-        relayEl.className = 'font-mono font-bold text-vv-muted';
-        relayEl.textContent = 'Реле OFF • Готово';
+        statusEl.textContent = 'Свободна';
         actionBtn.textContent = user ? 'Занять Ячейку #1' : 'Войти и занять Ячейку #1';
-      } else if (hwCell.status === 'charging') {
-        statusEl.className = 'font-bold text-vv-charging';
-        statusEl.textContent = 'Занята • Зарядка (IN_USE)';
-        relayEl.className = hwCell.relayOn
-          ? 'font-mono font-bold text-vv-free'
-          : 'font-mono font-bold text-vv-charging';
-        relayEl.textContent = hwCell.relayOn ? 'Реле ON • 5V подано' : 'Реле OFF • Дверь открыта';
-        actionBtn.textContent = 'Открыть в личном кабинете';
       } else {
-        statusEl.className = 'font-bold text-vv-charged';
-        statusEl.textContent = 'Завершено (EXPIRED)';
-        relayEl.className = 'font-mono font-bold text-vv-charged';
-        relayEl.textContent = 'Реле OFF • Ток отключён';
-        actionBtn.textContent = 'Получить телефон в кабинете';
+        statusEl.className = 'font-bold text-vv-charging';
+        statusEl.textContent = 'Заряжается';
+        actionBtn.textContent = (user && hwCell.ownerId === user.id)
+          ? 'Открыть ячейку и забрать телефон'
+          : 'Открыть в личном кабинете';
       }
 
-      doorEl.textContent = hwCell.door === 'OPEN' ? 'Открыта (OPEN)' : 'Закрыта (CLOSED)';
-      keyEl.textContent = hwState.key || '-';
+      doorEl.textContent = hwCell.door === 'OPEN' ? 'Открыта' : 'Закрыта';
+      keyEl.textContent = (hwState.key && hwState.key !== '-') ? hwState.key : '—';
       chargeEl.textContent = formatSecondsHMS(hwCell.remainingSec);
     }
 
@@ -2108,12 +2000,16 @@
           if (cell.status === 'charging' && cell.relayOn && cell.remainingSec > 0) {
             cell.remainingSec -= 1;
             if (cell.remainingSec <= 0) {
-              cell.status = 'charged';
+              cell.status = 'free';
               cell.remainingSec = 0;
               cell.relayOn = false;
+              cell.activeKey = null;
+              cell.ownerId = null;
               if (cell.isHardware) {
-                hwState.status = 'EXPIRED';
-                publishHardwareTopic(MQTT_TOPICS.STATUS, 'EXPIRED');
+                hwState.status = 'FREE';
+                hwState.key = '-';
+                publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
+                publishHardwareTopic(MQTT_TOPICS.KEY, '-');
               }
             }
             cellsChanged = true;
