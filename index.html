@@ -725,6 +725,7 @@
       STATUS: 'locker_project/status',
       DOOR: 'locker_project/door',
       KEY: 'locker_project/key',
+      STATE: 'locker_project/state',
       CMD: 'locker_project/cmd'
     };
 
@@ -1989,7 +1990,7 @@
     // -----------------------------------------------------------------------
     function subscribeHardwareTopics() {
       if (!mqttClient || !mqttClient.connected) return;
-      const topics = [MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY];
+      const topics = [MQTT_TOPICS.STATE, MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY];
       try {
         mqttClient.unsubscribe(topics, () => {
           mqttClient.subscribe(topics, { qos: 0 });
@@ -2034,8 +2035,35 @@
         mqttClient.on('message', (topic, message) => {
           const cleanTopic = String(topic || '').trim().toLowerCase();
           let val = message.toString().trim();
+          const hwCell = getHardwareCell();
 
-          // Поддержка как текстового формата (FREE / IN_USE), так и JSON
+          // Атомарное обновление состояния из единого JSON-топика ESP32
+          if (cleanTopic === MQTT_TOPICS.STATE && val.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(val);
+              if (parsed.status !== undefined) hwState.status = String(parsed.status).trim().toUpperCase();
+              if (parsed.door !== undefined) hwState.door = String(parsed.door).trim().toUpperCase();
+              if (parsed.key !== undefined) hwState.key = String(parsed.key).trim();
+              if (hwCell) {
+                const wasOccupied = hwCell.status !== 'free';
+                applyHardwareStateToCell(hwCell);
+                if (typeof parsed.rem === 'number' && hwCell.status === 'charging') {
+                  hwCell.remainingSec = parsed.rem;
+                }
+                saveCellsLocal();
+                syncCellToSupabase(hwCell);
+                updateTelemetrySheetData();
+                renderCellsTab();
+                renderCabinetTab();
+                if (wasOccupied && hwCell.status === 'free') {
+                  showToast('Ячейка #1 освобождена', 'Телефон получен, ячейка снова свободна.', 'free');
+                }
+              }
+            } catch (e) {}
+            return;
+          }
+
+          // Поддержка текстовых топиков (FREE / IN_USE / OPEN / CLOSED)
           if (val.startsWith('{')) {
             try {
               const parsed = JSON.parse(val);
@@ -2066,7 +2094,6 @@
             return;
           }
 
-          const hwCell = getHardwareCell();
           if (hwCell) {
             const wasOccupied = hwCell.status !== 'free';
             applyHardwareStateToCell(hwCell);
@@ -2113,7 +2140,7 @@
         hwCell.status = 'charging';
         hwCell.door = 'OPEN';
         hwCell.relayOn = false;
-        if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
+        hwCell.remainingSec = MAX_CHARGE_SEC;
         if (user && !hwCell.ownerId) {
           hwCell.ownerId = user.id;
         }
