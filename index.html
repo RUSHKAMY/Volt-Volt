@@ -254,21 +254,17 @@
         <div class="bg-vv-card border border-vv-border rounded-2xl p-3">
           <div class="flex items-center justify-between mb-2">
             <span id="summary-floor-label" class="text-[11px] font-medium text-vv-muted">Состояние ячеек • 5 этаж</span>
-            <span id="summary-free-ratio" class="text-xs font-extrabold text-vv-free">40 / 50 свободно</span>
+            <span id="summary-free-ratio" class="text-xs font-extrabold text-vv-free">43 / 50 свободно</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">40</div>
+              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">43</div>
               <div class="text-[11px] text-vv-muted mt-0.5">Свободно</div>
             </div>
             <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
               <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">7</div>
               <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
-            </div>
-            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-charged" class="text-base font-extrabold text-vv-charged leading-tight">3</div>
-              <div class="text-[11px] text-vv-muted mt-0.5">Завершено</div>
             </div>
           </div>
         </div>
@@ -444,64 +440,6 @@
 
           <!-- Карточка активной ячейки + генератор одноразового кода -->
           <div id="cab-active-cell-card" class="hidden space-y-3">
-            <!-- Мониторинг заряда -->
-            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3">
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <div id="cab-cell-number" class="w-10 h-10 rounded-xl bg-vv-lime/15 border border-vv-lime/30 text-vv-lime font-extrabold text-sm flex items-center justify-center shrink-0">
-                    #1
-                  </div>
-                  <div class="min-w-0">
-                    <div id="cab-cell-title" class="text-sm font-extrabold text-vv-text truncate">Ячейка #1 • 5 этаж</div>
-                    <div id="cab-door-status" class="text-[11px] text-vv-muted truncate">8 корпус • Дверь закрыта</div>
-                  </div>
-                </div>
-                <span id="cab-relay-pill" class="px-2.5 py-1 rounded-lg bg-vv-free/15 border border-vv-free/30 text-[11px] font-mono font-bold text-vv-free shrink-0">
-                  Питание 5V: ВКЛ
-                </span>
-              </div>
-
-              <div id="cab-mqtt-key-row" class="hidden px-3 py-1.5 rounded-xl bg-vv-bg border border-vv-border flex items-center justify-between text-xs">
-                <span class="text-vv-muted">Ключ сессии:</span>
-                <span id="cab-mqtt-key-val" class="font-mono font-bold text-vv-lime">—</span>
-              </div>
-
-              <div class="bg-vv-bg border border-vv-border rounded-xl p-3 flex items-center justify-between gap-2">
-                <div>
-                  <div class="text-[11px] text-vv-muted">Осталось времени сессии</div>
-                  <div id="cab-charge-substatus" class="text-xs font-semibold text-vv-text mt-0.5">Питание подано • Реле ON</div>
-                </div>
-                <span id="cab-timer-hms" class="text-2xl font-mono font-extrabold text-vv-charging shrink-0">01:30:00</span>
-              </div>
-
-              <button
-                id="cab-btn-test-finish"
-                type="button"
-                onclick="finishChargingAndPickup()"
-                class="w-full py-2.5 px-3 rounded-xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-xs font-semibold text-vv-charged transition"
-              >
-                Завершить зарядку и забрать телефон
-              </button>
-            </div>
-
-            <!-- Генератор одноразового кода получения (10 / 15 минут) -->
-            <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3">
-              <div>
-                <h3 class="text-sm font-extrabold text-vv-text">Одноразовый код получения</h3>
-                <p class="text-[11px] text-vv-muted mt-0.5">Создайте временный PIN-код для открытия ячейки на шкафчике</p>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">40</div>
-              <div class="text-[11px] text-vv-muted mt-0.5">Свободно</div>
-            </div>
-            <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">10</div>
-              <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
-            </div>
-          </div>
-        </div>
             <!-- Мониторинг заряда -->
             <div class="bg-vv-card border border-vv-border rounded-2xl p-4 space-y-3">
               <div class="flex items-center justify-between gap-2">
@@ -739,6 +677,15 @@
         >
           Занять Ячейку #1
         </button>
+
+        <button
+          id="tel-reset-free-btn"
+          type="button"
+          onclick="forceResetHardwareCellToFree()"
+          class="hidden w-full py-2.5 px-4 rounded-2xl bg-vv-bg hover:bg-vv-elevated border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition"
+        >
+          Сбросить статус на «Свободна»
+        </button>
       </div>
     </div>
   </div>
@@ -790,6 +737,7 @@
       key: '-'
     };
     let mqttClient = null;
+    let pendingMqttPublishes = {};
 
     let otp = {
       durationMin: 10,
@@ -799,232 +747,191 @@
     };
 
     // -----------------------------------------------------------------------
-    // 2. УТИЛИТЫ ДОСТУПА К ЯЧЕЙКАМ И ФОРМАТИРОВАНИЯ
+    // 2. ИНИЦИАЛИЗАЦИЯ ДАННЫХ ЯЧЕЕК (5 ЭТАЖЕЙ ПО 50 ЯЧЕЕК)
     // -----------------------------------------------------------------------
-    function getCell(floor, id) {
-      const list = cellsByFloor[floor];
-      if (!list) return null;
-      return list.find((c) => c.id === Number(id)) || null;
-    }
-
-    function getAllCells() {
-      return FLOORS.reduce((acc, fl) => acc.concat(cellsByFloor[fl] || []), []);
-    }
-
-    function getHardwareCell() {
-      // Ячейка #1 на 5 этаже 8 корпуса привязана к MQTT
-      return getCell(5, 1);
-    }
-
-    function formatSecondsHMS(totalSec) {
-      const s = Math.max(0, Math.floor(totalSec));
-      const h = String(Math.floor(s / 3600)).padStart(2, '0');
-      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-      const sec = String(s % 60).padStart(2, '0');
-      return `${h}:${m}:${sec}`;
-    }
-
-    function formatSecondsMS(totalSec) {
-      const s = Math.max(0, Math.floor(totalSec));
-      const m = String(Math.floor(s / 60)).padStart(2, '0');
-      const sec = String(s % 60).padStart(2, '0');
-      return `${m}:${sec}`;
-    }
-
-    function buildInitialCells() {
-      const map = {};
-      const busyTemplate = {
-        2: { status: 'charging', remainingSec: 1920, relayOn: true },
-        6: { status: 'charging', remainingSec: 3315, relayOn: true },
-        9: { status: 'charging', remainingSec: 1120, relayOn: true },
-        15: { status: 'charging', remainingSec: 4100, relayOn: true },
-        19: { status: 'charging', remainingSec: 2450, relayOn: true },
-        31: { status: 'charging', remainingSec: 3680, relayOn: true },
-        38: { status: 'charging', remainingSec: 640, relayOn: true }
+    function buildDefaultFloorCells(floor) {
+      const busyPresets = {
+        1: [4, 11, 19, 27, 36, 44],
+        2: [2, 8, 15, 22, 31, 40, 48],
+        3: [3, 9, 14, 25, 33, 41],
+        4: [5, 12, 18, 26, 35, 42, 49],
+        5: [2, 5, 9, 14, 21, 28, 37, 45]
       };
+      const busySet = new Set(busyPresets[floor] || []);
+      const list = [];
+
+      for (let i = 1; i <= CELLS_PER_FLOOR; i++) {
+        const isHwCell = floor === 5 && i === 1;
+        if (isHwCell) {
+          list.push({
+            floor,
+            id: i,
+            status: 'free',
+            door: 'CLOSED',
+            remainingSec: 0,
+            relayOn: false,
+            activeKey: null,
+            ownerId: null,
+            isHardware: true
+          });
+        } else if (busySet.has(i)) {
+          list.push({
+            floor,
+            id: i,
+            status: 'charging',
+            door: 'CLOSED',
+            remainingSec: 900 + ((i * 370 + floor * 210) % 4200),
+            relayOn: true,
+            activeKey: null,
+            ownerId: 'demo_student_' + floor + '_' + i,
+            isHardware: false
+          });
+        } else {
+          list.push({
+            floor,
+            id: i,
+            status: 'free',
+            door: 'CLOSED',
+            remainingSec: 0,
+            relayOn: false,
+            activeKey: null,
+            ownerId: null,
+            isHardware: false
+          });
+        }
+      }
+      return list;
+    }
+
+    function initAllCells() {
+      let savedMap = null;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.CELLS);
+        if (raw) savedMap = JSON.parse(raw);
+      } catch (e) {}
 
       FLOORS.forEach((floor) => {
-        const list = [];
-        for (let id = 1; id <= CELLS_PER_FLOOR; id++) {
-          const isHw = floor === 5 && id === 1;
-          const shiftedId = ((id + floor - 2) % CELLS_PER_FLOOR) + 1;
-          const preset = !isHw ? busyTemplate[shiftedId] : null;
-
-          if (preset) {
-            list.push({
-              id,
-              floor,
-              isHardware: false,
-              status: preset.status,
-              door: 'CLOSED',
-              remainingSec: preset.remainingSec,
-              relayOn: preset.relayOn,
-              activeKey: null,
-              ownerId: 'demo-other'
-            });
-          } else {
-            list.push({
-              id,
-              floor,
-              isHardware: isHw,
-              status: 'free',
-              door: 'CLOSED',
-              remainingSec: 0,
-              relayOn: false,
-              activeKey: null,
-              ownerId: null
-            });
-          }
+        const defaults = buildDefaultFloorCells(floor);
+        if (savedMap && Array.isArray(savedMap[floor]) && savedMap[floor].length === CELLS_PER_FLOOR) {
+          cellsByFloor[floor] = defaults.map((defCell, idx) => {
+            // Ячейка #1 на 5 этаже всегда управляется живым сигналом симуляции
+            if (floor === 5 && defCell.id === 1) return defCell;
+            const saved = savedMap[floor][idx];
+            if (!saved) return defCell;
+            return {
+              ...defCell,
+              status: saved.status === 'charging' ? 'charging' : 'free',
+              door: saved.door === 'OPEN' ? 'OPEN' : 'CLOSED',
+              remainingSec: Number(saved.remainingSec) || 0,
+              relayOn: Boolean(saved.relayOn),
+              activeKey: saved.activeKey || null,
+              ownerId: saved.ownerId || null
+            };
+          });
+        } else {
+          cellsByFloor[floor] = defaults;
         }
-        map[floor] = list;
       });
-
-      return map;
     }
 
     function saveCellsLocal() {
       try {
         localStorage.setItem(STORAGE_KEYS.CELLS, JSON.stringify(cellsByFloor));
-      } catch (e) {
-        console.warn('Local cells save failed:', e);
-      }
+      } catch (e) {}
     }
 
-    function loadCellsLocal() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEYS.CELLS);
-        if (!raw) return false;
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed[5] && Array.isArray(parsed[5]) && parsed[5].length === CELLS_PER_FLOOR) {
-          cellsByFloor = parsed;
-          // Ячейка #1 на 5 этаже всегда стартует как свободная и ждёт живой сигнал от симуляции
-          const hwCell = getHardwareCell();
-          if (hwCell) {
-            hwCell.isHardware = true;
-            hwCell.status = 'free';
-            hwCell.door = 'CLOSED';
-            hwCell.remainingSec = 0;
-            hwCell.relayOn = false;
-            hwCell.activeKey = null;
-            hwCell.ownerId = null;
-          }
-          // Переводим устаревший статус 'charged' в 'free'
-          getAllCells().forEach((c) => {
-            if (c.status === 'charged') {
-              c.status = 'free';
-              c.remainingSec = 0;
-              c.relayOn = false;
-              c.activeKey = null;
-              c.ownerId = null;
-            }
-          });
-          return true;
-        }
-      } catch (e) {
-        console.warn('Local cells load failed:', e);
-      }
-      return false;
+    function getFloorCells(floor = selectedFloor) {
+      return cellsByFloor[floor] || [];
+    }
+
+    function getAllCells() {
+      return FLOORS.flatMap((f) => cellsByFloor[f] || []);
+    }
+
+    function getCell(floor, id) {
+      return (cellsByFloor[floor] || []).find((c) => c.id === Number(id)) || null;
+    }
+
+    function getHardwareCell() {
+      return getCell(5, 1);
+    }
+
+    function getUserActiveCell() {
+      if (!user) return null;
+      return getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free') || null;
+    }
+
+    function formatSecondsHMS(sec) {
+      const s = Math.max(0, Math.floor(Number(sec) || 0));
+      const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function formatSecondsMS(sec) {
+      const s = Math.max(0, Math.floor(Number(sec) || 0));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
     }
 
     // -----------------------------------------------------------------------
-    // 3. ВЫПАДАЮЩИЙ СПИСОК ЭТАЖЕЙ (8 КОРПУС) И НАВИГАЦИЯ
+    // 3. НАВИГАЦИЯ, ВЫПАДАЮЩИЙ СПИСОК ЭТАЖЕЙ И УВЕДОМЛЕНИЯ
     // -----------------------------------------------------------------------
-    function renderFloorDropdown() {
-      const selectedLabel = document.getElementById('dropdown-selected-floor-text');
-      const freeBadge = document.getElementById('dropdown-free-badge');
-      const optionsContainer = document.getElementById('dropdown-floors-options');
+    function showToast(title, message, tone = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
 
-      const currentCells = cellsByFloor[selectedFloor] || [];
-      const freeCount = currentCells.filter((c) => c.status === 'free').length;
+      const borderMap = {
+        free: 'border-vv-free/40',
+        charging: 'border-vv-charging/40',
+        danger: 'border-vv-danger/40',
+        info: 'border-vv-lime/40'
+      };
+      const dotMap = {
+        free: 'bg-vv-free',
+        charging: 'bg-vv-charging',
+        danger: 'bg-vv-danger',
+        info: 'bg-vv-lime'
+      };
 
-      if (selectedLabel) {
-        selectedLabel.textContent = `Бокс • ${selectedFloor} этаж`;
-      }
-      if (freeBadge) {
-        freeBadge.textContent = `${freeCount} / ${CELLS_PER_FLOOR}`;
-      }
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto bg-vv-elevated/95 backdrop-blur-md border ${borderMap[tone] || borderMap.info} rounded-2xl px-3.5 py-2.5 shadow-2xl flex items-start gap-2.5 transition-all duration-200`;
+      toast.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${dotMap[tone] || dotMap.info} mt-1.5 shrink-0"></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-extrabold text-vv-text">${title}</div>
+          ${message ? `<div class="text-[11px] text-vv-muted mt-0.5 leading-snug">${message}</div>` : ''}
+        </div>
+      `;
 
-      if (optionsContainer) {
-        optionsContainer.innerHTML = FLOORS.slice().reverse().map((fl) => {
-          const flCells = cellsByFloor[fl] || [];
-          const flFree = flCells.filter((c) => c.status === 'free').length;
-          const isSelected = fl === selectedFloor;
-
-          return `
-            <button
-              type="button"
-              onclick="selectFloor(${fl})"
-              class="w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-left transition ${
-                isSelected
-                  ? 'bg-vv-lime/15 border border-vv-lime/40 text-vv-lime'
-                  : 'hover:bg-vv-card border border-transparent text-vv-text'
-              }"
-            >
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="text-xs font-bold truncate">Бокс • ${fl} этаж</span>
-              </div>
-              <span class="text-[11px] font-extrabold ${flFree > 0 ? 'text-vv-free' : 'text-vv-muted'} shrink-0">
-                ${flFree} / ${CELLS_PER_FLOOR} свободно
-              </span>
-            </button>
-          `;
-        }).join('');
-      }
-    }
-
-    function toggleFloorDropdown(event) {
-      if (event) {
-        event.stopPropagation();
-      }
-      isFloorDropdownOpen = !isFloorDropdownOpen;
-      const menu = document.getElementById('building-dropdown-menu');
-      const chevron = document.getElementById('dropdown-chevron');
-      if (menu) {
-        menu.classList.toggle('hidden', !isFloorDropdownOpen);
-      }
-      if (chevron) {
-        chevron.style.transform = isFloorDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)';
-      }
-    }
-
-    function closeFloorDropdown() {
-      if (!isFloorDropdownOpen) return;
-      isFloorDropdownOpen = false;
-      const menu = document.getElementById('building-dropdown-menu');
-      const chevron = document.getElementById('dropdown-chevron');
-      if (menu) menu.classList.add('hidden');
-      if (chevron) chevron.style.transform = 'rotate(0deg)';
-    }
-
-    function selectFloor(floor) {
-      selectedFloor = Number(floor);
-      closeFloorDropdown();
-      renderFloorDropdown();
-      renderCellsTab();
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 220);
+      }, 3200);
     }
 
     function toggleExpandView() {
       const shell = document.getElementById('app-shell');
-      if (shell) {
-        shell.classList.toggle('is-expanded');
-      }
+      if (!shell) return;
+      shell.classList.toggle('is-expanded');
     }
 
-    function switchTab(tab) {
-      activeTab = tab;
-      closeFloorDropdown();
-
+    function switchTab(tabName) {
+      activeTab = tabName;
       const tabCells = document.getElementById('tab-cells');
       const tabCabinet = document.getElementById('tab-cabinet');
       const navCells = document.getElementById('nav-btn-cells');
       const navCabinet = document.getElementById('nav-btn-cabinet');
 
-      if (tab === 'cells') {
+      if (tabName === 'cells') {
         tabCells.classList.remove('hidden');
         tabCabinet.classList.add('hidden');
         navCells.className = 'py-1.5 px-2 rounded-xl bg-vv-lime/15 text-vv-lime flex flex-col items-center justify-center gap-1 transition';
         navCabinet.className = 'py-1.5 px-2 rounded-xl text-vv-muted hover:text-vv-text flex flex-col items-center justify-center gap-1 transition';
-        renderFloorDropdown();
         renderCellsTab();
       } else {
         tabCells.classList.add('hidden');
@@ -1035,9 +942,70 @@
       }
     }
 
-    // -----------------------------------------------------------------------
-    // 4. ОТРИСОВКА СЕТКИ ЯЧЕЕК И ФИЛЬТРОВ
-    // -----------------------------------------------------------------------
+    function toggleFloorDropdown(event) {
+      if (event) event.stopPropagation();
+      isFloorDropdownOpen = !isFloorDropdownOpen;
+      const menu = document.getElementById('building-dropdown-menu');
+      const chevron = document.getElementById('dropdown-chevron');
+      if (!menu) return;
+
+      if (isFloorDropdownOpen) {
+        renderFloorDropdownOptions();
+        menu.classList.remove('hidden');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+      } else {
+        menu.classList.add('hidden');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function closeFloorDropdown() {
+      isFloorDropdownOpen = false;
+      const menu = document.getElementById('building-dropdown-menu');
+      const chevron = document.getElementById('dropdown-chevron');
+      if (menu) menu.classList.add('hidden');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+
+    function selectFloor(floor) {
+      selectedFloor = Number(floor);
+      closeFloorDropdown();
+      renderCellsTab();
+    }
+
+    function renderFloorDropdownOptions() {
+      const container = document.getElementById('dropdown-floors-options');
+      if (!container) return;
+
+      container.innerHTML = FLOORS.map((floor) => {
+        const list = getFloorCells(floor);
+        const freeCount = list.filter((c) => c.status === 'free').length;
+        const isSelected = floor === selectedFloor;
+
+        return `
+          <button
+            type="button"
+            onclick="selectFloor(${floor})"
+            class="w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-left transition ${
+              isSelected
+                ? 'bg-vv-lime/15 border border-vv-lime/40 text-vv-text'
+                : 'hover:bg-vv-card border border-transparent text-vv-muted hover:text-vv-text'
+            }"
+          >
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-6 h-6 rounded-lg ${isSelected ? 'bg-vv-lime text-vv-bg font-extrabold' : 'bg-vv-bg border border-vv-border text-vv-muted font-bold'} text-xs flex items-center justify-center shrink-0">
+                ${floor}
+              </span>
+              <span class="text-xs font-bold truncate">Бокс • ${floor} этаж</span>
+            </div>
+            <span class="text-[11px] font-extrabold ${freeCount > 0 ? 'text-vv-free' : 'text-vv-danger'} shrink-0">
+              ${freeCount} / ${CELLS_PER_FLOOR} своб.
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
     function setCellFilter(filter) {
       cellFilter = filter;
       const filters = ['all', 'free', 'busy'];
@@ -1053,153 +1021,165 @@
       renderCellsTab();
     }
 
+    // -----------------------------------------------------------------------
+    // 4. ОТРИСОВКА ВКЛАДКИ «ЯЧЕЙКИ»
+    // -----------------------------------------------------------------------
     function renderCellsTab() {
-      const cells = cellsByFloor[selectedFloor] || [];
-      const freeCount = cells.filter((c) => c.status === 'free').length;
-      const busyCount = cells.filter((c) => c.status !== 'free').length;
+      const list = getFloorCells(selectedFloor);
+      const freeCount = list.filter((c) => c.status === 'free').length;
+      const busyCount = list.length - freeCount;
 
-      document.getElementById('summary-floor-label').textContent = `Состояние ячеек • ${selectedFloor} этаж`;
-      document.getElementById('summary-free-ratio').textContent = `${freeCount} / ${CELLS_PER_FLOOR} свободно`;
-      document.getElementById('stat-free').textContent = freeCount;
-      document.getElementById('stat-charging').textContent = busyCount;
+      const selectedFloorText = document.getElementById('dropdown-selected-floor-text');
+      const freeBadge = document.getElementById('dropdown-free-badge');
+      const summaryFloorLabel = document.getElementById('summary-floor-label');
+      const summaryFreeRatio = document.getElementById('summary-free-ratio');
+      const statFree = document.getElementById('stat-free');
+      const statCharging = document.getElementById('stat-charging');
 
-      document.getElementById('filter-count-all').textContent = CELLS_PER_FLOOR;
-      document.getElementById('filter-count-free').textContent = freeCount;
-      document.getElementById('filter-count-busy').textContent = busyCount;
+      if (selectedFloorText) selectedFloorText.textContent = `Бокс • ${selectedFloor} этаж`;
+      if (freeBadge) freeBadge.textContent = `${freeCount} / ${CELLS_PER_FLOOR}`;
+      if (summaryFloorLabel) summaryFloorLabel.textContent = `Состояние ячеек • ${selectedFloor} этаж`;
+      if (summaryFreeRatio) summaryFreeRatio.textContent = `${freeCount} / ${CELLS_PER_FLOOR} свободно`;
+      if (statFree) statFree.textContent = String(freeCount);
+      if (statCharging) statCharging.textContent = String(busyCount);
 
-      let filtered = cells;
-      if (cellFilter === 'free') {
-        filtered = cells.filter((c) => c.status === 'free');
-      } else if (cellFilter === 'busy') {
-        filtered = cells.filter((c) => c.status !== 'free');
-      }
+      const countAllEl = document.getElementById('filter-count-all');
+      const countFreeEl = document.getElementById('filter-count-free');
+      const countBusyEl = document.getElementById('filter-count-busy');
+      if (countAllEl) countAllEl.textContent = String(list.length);
+      if (countFreeEl) countFreeEl.textContent = String(freeCount);
+      if (countBusyEl) countBusyEl.textContent = String(busyCount);
+
+      const filtered = list.filter((cell) => {
+        if (cellFilter === 'free') return cell.status === 'free';
+        if (cellFilter === 'busy') return cell.status !== 'free';
+        return true;
+      });
 
       const grid = document.getElementById('cells-grid');
-      if (grid) {
-        grid.innerHTML = filtered.map((cell) => renderCellCardHtml(cell)).join('');
-      }
-      renderFloorDropdown();
-    }
+      if (!grid) return;
 
-    function renderCellCardHtml(cell) {
-      const isMine = user && cell.ownerId === user.id && cell.status !== 'free';
-      const doorText = cell.door === 'OPEN' ? 'Открыта' : 'Закрыта';
-      const doorColor = cell.door === 'OPEN' ? 'text-vv-charging' : 'text-vv-muted';
+      grid.innerHTML = filtered.map((cell) => {
+        const isMine = Boolean(user && cell.ownerId === user.id && cell.status !== 'free');
+        const isFree = cell.status === 'free';
 
-      let badgeHtml = '';
-      let infoRowHtml = '';
-      let footerText = '';
-      const borderClass = isMine ? 'border-vv-lime/60' : 'border-vv-border hover:border-vv-lime/40';
-
-      if (cell.status === 'free') {
-        badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[10px] font-bold text-vv-free whitespace-nowrap">Свободна</span>`;
-        infoRowHtml = `
+        let cardBorder = 'border-vv-border hover:border-vv-free/40';
+        let badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[10px] font-bold text-vv-free">Свободна</span>';
+        let middleRowHtml = `
           <div class="flex items-center justify-between text-[11px]">
             <span class="text-vv-muted">Состояние</span>
             <span class="font-bold text-vv-free">Готова</span>
           </div>
         `;
-        footerText = 'Нажмите, чтобы занять';
-      } else {
-        badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 border border-vv-charging/30 text-[10px] font-bold text-vv-charging whitespace-nowrap">${isMine ? 'Ваша • Заряд' : 'Заряжается'}</span>`;
-        const timerStr = cell.door === 'OPEN' ? '--:--:--' : formatSecondsHMS(cell.remainingSec);
-        infoRowHtml = `
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="text-vv-muted">Таймер</span>
-            <span class="font-mono font-bold text-vv-charging">${timerStr}</span>
-          </div>
+        let bottomText = 'Нажмите, чтобы занять';
+
+        if (isMine) {
+          cardBorder = 'border-vv-lime/60 shadow-md shadow-vv-lime/5';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-lime/20 border border-vv-lime/40 text-[10px] font-extrabold text-vv-lime">Ваша • Заряд</span>';
+          middleRowHtml = `
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-vv-muted">Таймер</span>
+              <span class="font-mono font-bold text-vv-charging">${formatSecondsHMS(cell.remainingSec)}</span>
+            </div>
+          `;
+          bottomText = 'Заряжается';
+        } else if (!isFree) {
+          cardBorder = 'border-vv-border hover:border-vv-charging/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-vv-charging/15 border border-vv-charging/30 text-[10px] font-bold text-vv-charging">Заряжается</span>';
+          middleRowHtml = `
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-vv-muted">Таймер</span>
+              <span class="font-mono font-bold text-vv-charging">${formatSecondsHMS(cell.remainingSec)}</span>
+            </div>
+          `;
+          bottomText = 'Заряжается';
+        }
+
+        const doorText = cell.door === 'OPEN' ? 'Открыта' : 'Закрыта';
+
+        return `
+          <button
+            type="button"
+            onclick="handleCellClick(${cell.floor}, ${cell.id})"
+            class="bg-vv-card hover:bg-vv-elevated border ${cardBorder} rounded-2xl p-3 text-left flex flex-col justify-between gap-2.5 transition active:scale-[0.98]"
+          >
+            <div class="flex items-center justify-between gap-1.5 w-full">
+              <span class="text-sm font-extrabold text-vv-text">#${cell.id}</span>
+              ${badgeHtml}
+            </div>
+
+            <div class="flex items-center gap-1.5 text-[11px] text-vv-muted">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>${doorText}</span>
+            </div>
+
+            <div class="w-full space-y-1.5 pt-0.5">
+              ${middleRowHtml}
+              <div class="text-[11px] text-vv-muted truncate">${bottomText}</div>
+            </div>
+          </button>
         `;
-        footerText = cell.door === 'OPEN' ? 'Ожидание закрытия дверцы' : 'Заряжается';
-      }
-
-      return `
-        <button
-          type="button"
-          onclick="handleCellCardClick(${cell.floor}, ${cell.id})"
-          class="bg-vv-card hover:bg-vv-elevated active:scale-[0.98] border ${borderClass} rounded-2xl p-3 text-left transition flex flex-col justify-between gap-2.5 min-w-0"
-        >
-          <div class="flex items-center justify-between gap-1.5 w-full">
-            <span class="text-sm font-extrabold text-vv-text">#${cell.id}</span>
-            ${badgeHtml}
-          </div>
-
-          <div class="flex items-center gap-1.5 text-[11px] ${doorColor}">
-            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span class="truncate">${doorText}</span>
-          </div>
-
-          <div class="w-full pt-1.5 border-t border-vv-border/70">
-            ${infoRowHtml}
-          </div>
-
-          <div class="text-[10px] text-vv-muted truncate w-full">
-            ${footerText}
-          </div>
-        </button>
-      `;
+      }).join('');
     }
 
-    function handleCellCardClick(floor, id) {
+    // -----------------------------------------------------------------------
+    // 5. ВЗАИМОДЕЙСТВИЕ С ЯЧЕЙКАМИ И ШТОРКАМИ (BOTTOM SHEETS)
+    // -----------------------------------------------------------------------
+    function openBottomSheet(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    }
+
+    function closeBottomSheet(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+
+    function handleCellClick(floor, id) {
       const cell = getCell(floor, id);
       if (!cell) return;
 
-      // Для Ячейки #1 на 5 этаже открываем шторку телеметрии MQTT
-      if (cell.isHardware) {
-        openTelemetrySheet();
+      // Ячейка #1 на 5 этаже открывает отдельную информационную шторку
+      if (floor === 5 && id === 1) {
+        updateTelemetrySheetData();
+        openBottomSheet('sheet-telemetry-backdrop');
         return;
       }
 
-      if (cell.status === 'free') {
-        openOccupySheet(floor, id);
-        return;
-      }
-
-      if (user && cell.ownerId === user.id) {
+      if (user && cell.ownerId === user.id && cell.status !== 'free') {
         switchTab('cabinet');
         return;
       }
 
-      showToast(`Ячейка #${cell.id} (${floor} этаж)`, 'Эта ячейка сейчас занята другим пользователем.', 'warn');
-    }
-
-    // -----------------------------------------------------------------------
-    // 5. ВЫДВИЖНЫЕ ШТОРКИ (BOTTOM SHEETS)
-    // -----------------------------------------------------------------------
-    function openOccupySheet(floor, id) {
-      pendingOccupyTarget = { floor, id };
-      document.getElementById('sheet-cell-num-badge').textContent = `#${id}`;
-      document.getElementById('sheet-cell-title').textContent = `Ячейка #${id} (${floor} эт.) • Свободна`;
-
-      const authContent = document.getElementById('sheet-occupy-auth-content');
-      const guestContent = document.getElementById('sheet-occupy-guest-content');
-
-      if (user) {
-        authContent.classList.remove('hidden');
-        guestContent.classList.add('hidden');
-      } else {
-        authContent.classList.add('hidden');
-        guestContent.classList.remove('hidden');
+      if (cell.status !== 'free') {
+        showToast(`Ячейка #${cell.id} занята`, 'Выберите любую свободную ячейку.', 'charging');
+        return;
       }
 
-      const backdrop = document.getElementById('sheet-occupy-backdrop');
-      backdrop.classList.remove('hidden');
-      backdrop.classList.add('flex');
-    }
+      pendingOccupyTarget = { floor, id };
+      const numBadge = document.getElementById('sheet-cell-num-badge');
+      const titleEl = document.getElementById('sheet-cell-title');
+      const authBox = document.getElementById('sheet-occupy-auth-content');
+      const guestBox = document.getElementById('sheet-occupy-guest-content');
 
-    function openTelemetrySheet() {
-      updateTelemetrySheetData();
-      const backdrop = document.getElementById('sheet-telemetry-backdrop');
-      backdrop.classList.remove('hidden');
-      backdrop.classList.add('flex');
-    }
+      if (numBadge) numBadge.textContent = `#${id}`;
+      if (titleEl) titleEl.textContent = `Ячейка #${id} (${floor} эт.) • Свободна`;
 
-    function closeBottomSheet(backdropId) {
-      const backdrop = document.getElementById(backdropId);
-      if (!backdrop) return;
-      backdrop.classList.add('hidden');
-      backdrop.classList.remove('flex');
+      if (user) {
+        if (authBox) authBox.classList.remove('hidden');
+        if (guestBox) guestBox.classList.add('hidden');
+      } else {
+        if (authBox) authBox.classList.add('hidden');
+        if (guestBox) guestBox.classList.remove('hidden');
+      }
+
+      openBottomSheet('sheet-occupy-backdrop');
     }
 
     function goToCabinetLoginFromSheet() {
@@ -1208,20 +1188,30 @@
     }
 
     function confirmOccupySelectedCell() {
-      if (!user || !pendingOccupyTarget) return;
-
-      const existingMine = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
-      if (existingMine) {
+      if (!user) {
         closeBottomSheet('sheet-occupy-backdrop');
-        showToast('У вас уже есть ячейка', `Занята ячейка #${existingMine.id} на ${existingMine.floor} этаже.`, 'warn');
         switchTab('cabinet');
         return;
       }
 
+      const existing = getUserActiveCell();
+      if (existing) {
+        closeBottomSheet('sheet-occupy-backdrop');
+        showToast(
+          'У вас уже занята ячейка',
+          `Сначала завершите зарядку в ячейке #${existing.id} (${existing.floor} этаж).`,
+          'charging'
+        );
+        switchTab('cabinet');
+        return;
+      }
+
+      if (!pendingOccupyTarget) return;
       const cell = getCell(pendingOccupyTarget.floor, pendingOccupyTarget.id);
       if (!cell || cell.status !== 'free') {
         closeBottomSheet('sheet-occupy-backdrop');
-        showToast('Ячейка недоступна', 'Выберите другую свободную ячейку.', 'danger');
+        showToast('Ячейка недоступна', 'Она только что была занята.', 'danger');
+        renderCellsTab();
         return;
       }
 
@@ -1229,26 +1219,62 @@
       cell.door = 'CLOSED';
       cell.remainingSec = MAX_CHARGE_SEC;
       cell.relayOn = true;
-      cell.activeKey = String(Math.floor(1000 + Math.random() * 9000));
       cell.ownerId = user.id;
+      cell.activeKey = null;
 
-      if (cell.isHardware) {
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
+
+      if (cell.floor === 5 && cell.id === 1) {
         hwState.status = 'IN_USE';
         hwState.door = 'CLOSED';
-        hwState.key = cell.activeKey;
         publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE');
         publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
-        publishHardwareTopic(MQTT_TOPICS.KEY, cell.activeKey);
+      }
+
+      closeBottomSheet('sheet-occupy-backdrop');
+      saveCellsLocal();
+      syncCellToSupabase(cell);
+      syncUserStateToSupabase();
+      renderCellsTab();
+      switchTab('cabinet');
+      showToast(`Ячейка #${cell.id} занята`, `8 корпус, ${cell.floor} этаж — зарядка запущена.`, 'free');
+    }
+
+    function finishChargingAndPickup() {
+      const cell = getUserActiveCell();
+      if (!cell) return;
+
+      const freedId = cell.id;
+      const freedFloor = cell.floor;
+
+      cell.status = 'free';
+      cell.door = 'CLOSED';
+      cell.remainingSec = 0;
+      cell.relayOn = false;
+      cell.activeKey = null;
+      cell.ownerId = null;
+
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
+
+      if (freedFloor === 5 && freedId === 1) {
+        hwState.status = 'FREE';
+        hwState.door = 'CLOSED';
+        hwState.key = '-';
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
+        publishHardwareTopic(MQTT_TOPICS.KEY, '-');
       }
 
       saveCellsLocal();
       syncCellToSupabase(cell);
       syncUserStateToSupabase();
-
-      closeBottomSheet('sheet-occupy-backdrop');
       renderCellsTab();
-      showToast(`Ячейка #${cell.id} (${cell.floor} этаж)`, 'Замок открыт, телефон поставлен на зарядку.', 'free');
-      switchTab('cabinet');
+      renderCabinetTab();
+      showToast(`Ячейка #${freedId} открыта`, 'Зарядка завершена, ячейка снова свободна.', 'free');
     }
 
     function handleTelemetrySheetAction() {
@@ -1270,51 +1296,91 @@
       }
     }
 
+    function forceResetHardwareCellToFree() {
+      const hwCell = getHardwareCell();
+      if (!hwCell) return;
+
+      hwState.status = 'FREE';
+      hwState.door = 'CLOSED';
+      hwState.key = '-';
+
+      hwCell.status = 'free';
+      hwCell.door = 'CLOSED';
+      hwCell.remainingSec = 0;
+      hwCell.relayOn = false;
+      hwCell.activeKey = null;
+      hwCell.ownerId = null;
+
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
+
+      publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
+      publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
+      publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+
+      saveCellsLocal();
+      syncCellToSupabase(hwCell);
+      syncUserStateToSupabase();
+      updateTelemetrySheetData();
+      renderCellsTab();
+      renderCabinetTab();
+      closeBottomSheet('sheet-telemetry-backdrop');
+      showToast('Ячейка #1 свободна', 'Статус ячейки синхронизирован.', 'free');
+    }
+
     // -----------------------------------------------------------------------
     // 6. SUPABASE AUTH + СОХРАНЕНИЕ ДАННЫХ + ЗАПОМИНАНИЕ ЛОГИНА/ПАРОЛЯ
     // -----------------------------------------------------------------------
-    function normalizeAuthIdentifier(rawInput) {
-      const trimmed = rawInput.trim();
+    function initSupabase() {
+      if (!window.supabase) return;
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (e) {
+        console.warn('Supabase init failed:', e);
+      }
+    }
+
+    function normalizeAuthEmail(identifier) {
+      const trimmed = String(identifier || '').trim();
+      if (trimmed.includes('@')) return trimmed.toLowerCase();
+      const digits = trimmed.replace(/\D/g, '');
+      const cleanPhone = digits || trimmed.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+      return `${cleanPhone}@voltvolt.local`;
+    }
+
+    function extractDisplayName(identifier) {
+      const trimmed = String(identifier || '').trim();
       if (trimmed.includes('@')) {
-        return {
-          email: trimmed.toLowerCase(),
-          display: trimmed
-        };
+        const local = trimmed.split('@')[0];
+        return local.endsWith('') ? local : trimmed;
       }
-      let digits = trimmed.replace(/\D/g, '');
-      if (digits.length === 11 && digits.startsWith('8')) {
-        digits = '7' + digits.slice(1);
-      }
-      const cleanKey = digits.length >= 6 ? digits : trimmed.toLowerCase().replace(/[^a-z0-9]/g, '');
-      return {
-        email: `${cleanKey || 'user'}@voltvolt.local`,
-        display: trimmed
-      };
+      return trimmed || 'Пользователь';
     }
 
     function setAuthMode(mode) {
-      authMode = mode;
+      authMode = mode === 'register' ? 'register' : 'login';
       const tabLogin = document.getElementById('auth-tab-login');
       const tabReg = document.getElementById('auth-tab-register');
-      const title = document.getElementById('auth-card-title');
-      const subtitle = document.getElementById('auth-card-subtitle');
+      const titleEl = document.getElementById('auth-card-title');
+      const subEl = document.getElementById('auth-card-subtitle');
       const submitBtn = document.getElementById('auth-submit-btn');
       const switchBtn = document.getElementById('auth-switch-mode-btn');
 
-      if (mode === 'login') {
-        tabLogin.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
-        tabReg.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
-        title.textContent = 'Вход в кабинет';
-        subtitle.textContent = 'Авторизация в системе Вольт Вольт';
-        submitBtn.textContent = 'Войти';
-        switchBtn.innerHTML = 'Нет аккаунта? <span class="text-vv-lime font-bold">Регистрация</span>';
+      if (authMode === 'login') {
+        if (tabLogin) tabLogin.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
+        if (tabReg) tabReg.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
+        if (titleEl) titleEl.textContent = 'Вход в кабинет';
+        if (subEl) subEl.textContent = 'Авторизация в системе Вольт Вольт';
+        if (submitBtn) submitBtn.textContent = 'Войти';
+        if (switchBtn) switchBtn.innerHTML = 'Нет аккаунта? <span class="text-vv-lime font-bold">Регистрация</span>';
       } else {
-        tabReg.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
-        tabLogin.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
-        title.textContent = 'Регистрация';
-        subtitle.textContent = 'Создание аккаунта по почте или телефону';
-        submitBtn.textContent = 'Зарегистрироваться';
-        switchBtn.innerHTML = 'Уже есть аккаунт? <span class="text-vv-lime font-bold">Вход</span>';
+        if (tabReg) tabReg.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
+        if (tabLogin) tabLogin.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
+        if (titleEl) titleEl.textContent = 'Регистрация';
+        if (subEl) subEl.textContent = 'Создайте аккаунт для доступа к ячейкам';
+        if (submitBtn) submitBtn.textContent = 'Зарегистрироваться';
+        if (switchBtn) switchBtn.innerHTML = 'Уже есть аккаунт? <span class="text-vv-lime font-bold">Вход</span>';
       }
     }
 
@@ -1323,9 +1389,9 @@
     }
 
     function togglePasswordVisibility() {
-      const input = document.getElementById('input-student-pass');
-      if (!input) return;
-      input.type = input.type === 'password' ? 'text' : 'password';
+      const passInput = document.getElementById('input-student-pass');
+      if (!passInput) return;
+      passInput.type = passInput.type === 'password' ? 'text' : 'password';
     }
 
     function loadSavedCredentials() {
@@ -1333,325 +1399,216 @@
         const raw = localStorage.getItem(STORAGE_KEYS.CREDS);
         if (!raw) return;
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.identifier) {
-          document.getElementById('input-student-id').value = parsed.identifier;
-          document.getElementById('input-student-pass').value = parsed.password || '';
-          document.getElementById('remember-credentials-checkbox').checked = true;
-        }
-      } catch (e) {
-        console.warn('Load saved creds failed:', e);
-      }
+        const idInput = document.getElementById('input-student-id');
+        const passInput = document.getElementById('input-student-pass');
+        const cb = document.getElementById('remember-credentials-checkbox');
+        if (idInput && parsed.identifier) idInput.value = parsed.identifier;
+        if (passInput && parsed.password) passInput.value = parsed.password;
+        if (cb) cb.checked = true;
+      } catch (e) {}
     }
 
-    function saveCredentials(identifier, password) {
-      const shouldRemember = document.getElementById('remember-credentials-checkbox')?.checked;
-      if (shouldRemember) {
-        localStorage.setItem(STORAGE_KEYS.CREDS, JSON.stringify({ identifier, password }));
+    function saveCredentialsIfChecked(identifier, password) {
+      const cb = document.getElementById('remember-credentials-checkbox');
+      if (cb && cb.checked) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.CREDS, JSON.stringify({ identifier, password }));
+        } catch (e) {}
       } else {
-        localStorage.removeItem(STORAGE_KEYS.CREDS);
+        try {
+          localStorage.removeItem(STORAGE_KEYS.CREDS);
+        } catch (e) {}
       }
     }
 
     function handleRememberToggle() {
-      const checked = document.getElementById('remember-credentials-checkbox')?.checked;
-      if (!checked) {
-        localStorage.removeItem(STORAGE_KEYS.CREDS);
-      } else {
-        const idVal = document.getElementById('input-student-id')?.value || '';
-        const passVal = document.getElementById('input-student-pass')?.value || '';
-        if (idVal) saveCredentials(idVal, passVal);
-      }
-    }
-
-    function saveLocalSession(sessionUser) {
-      try {
-        localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(sessionUser));
-      } catch (e) {}
-    }
-
-    function restoreLocalSession() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEYS.SESSION);
-        if (!raw) return null;
-        return JSON.parse(raw);
-      } catch (e) {
-        return null;
-      }
-    }
-
-    function clearLocalSession() {
-      localStorage.removeItem(STORAGE_KEYS.SESSION);
-    }
-
-    async function initSupabase() {
-      if (!window.supabase || !window.supabase.createClient) return;
-      try {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const { data: sessionData } = await supabaseClient.auth.getSession();
-        if (sessionData && sessionData.session && sessionData.session.user) {
-          applySupabaseUser(sessionData.session.user);
-        }
-
-        await loadCellsFromSupabase();
-        subscribeSupabaseRealtime();
-      } catch (e) {
-        console.warn('Supabase init fallback:', e);
-      }
-    }
-
-    function applySupabaseUser(sbUser) {
-      const meta = sbUser.user_metadata || {};
-      const displayName = meta.display_identifier || sbUser.email || 'Пользователь';
-      user = {
-        id: sbUser.id,
-        identifier: displayName,
-        email: sbUser.email,
-        meta
-      };
-      saveLocalSession(user);
-      restoreUserBindingFromMeta(meta);
-      updateHeaderAvatar();
-      renderCabinetTab();
-      renderCellsTab();
-    }
-
-    function restoreUserBindingFromMeta(meta) {
-      if (!user || !meta) return;
-      if (meta.vv_cell_floor && meta.vv_cell_id) {
-        const floor = Number(meta.vv_cell_floor);
-        const id = Number(meta.vv_cell_id);
-        // Для Ячейки #1 на 5 этаже источником истины является MQTT симуляция, не перезаписываем её из кэша
-        const cell = getCell(floor, id);
-        if (cell && !cell.isHardware) {
-          cell.ownerId = user.id;
-          if (cell.status === 'free') {
-            cell.status = 'charging';
-            cell.remainingSec = MAX_CHARGE_SEC;
-            cell.relayOn = true;
-          }
-        }
-      }
-      if (meta.vv_otp_code && meta.vv_otp_expires_at) {
-        const leftSec = Math.floor((Number(meta.vv_otp_expires_at) - Date.now()) / 1000);
-        if (leftSec > 0) {
-          otp.code = String(meta.vv_otp_code);
-          otp.remainingSec = leftSec;
-          otp.expired = false;
-        }
-      }
-    }
-
-    async function loadCellsFromSupabase() {
-      if (!supabaseClient) return;
-      try {
-        const { data, error } = await supabaseClient.from('vv_cells').select('*');
-        if (error) {
-          supabaseDbReady = false;
-          return;
-        }
-        supabaseDbReady = true;
-        if (data && data.length > 0) {
-          applyRemoteCells(data);
-          saveCellsLocal();
-        }
-      } catch (e) {
-        supabaseDbReady = false;
-      }
-    }
-
-    function applyRemoteCells(rows) {
-      rows.forEach((row) => {
-        const floor = Number(row.floor || 5);
-        const cell = getCell(floor, row.id);
-        if (cell && !cell.isHardware) {
-          const remoteStatus = row.status === 'charging' ? 'charging' : 'free';
-          cell.status = remoteStatus;
-          cell.door = row.door || 'CLOSED';
-          cell.remainingSec = remoteStatus === 'free' ? 0 : Number(row.remaining_sec || 0);
-          cell.relayOn = remoteStatus === 'charging';
-          cell.activeKey = remoteStatus === 'free' ? null : (row.active_key || null);
-          cell.ownerId = remoteStatus === 'free' ? null : (row.owner_id || null);
-        }
-      });
-      renderCellsTab();
-      renderCabinetTab();
-    }
-
-    async function syncCellToSupabase(cell) {
-      if (!supabaseClient || !supabaseDbReady || !cell) return;
-      try {
-        await supabaseClient.from('vv_cells').upsert(
-          {
-            floor: cell.floor,
-            id: cell.id,
-            status: cell.status,
-            door: cell.door,
-            remaining_sec: cell.remainingSec,
-            relay_on: cell.relayOn,
-            active_key: cell.activeKey,
-            owner_id: cell.ownerId,
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'floor,id' }
-        );
-      } catch (e) {
-        console.warn('Supabase cell upsert skipped:', e);
-      }
-    }
-
-    function subscribeSupabaseRealtime() {
-      if (!supabaseClient || !supabaseDbReady) return;
-      try {
-        supabaseClient
-          .channel('vv_cells_realtime')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'vv_cells' },
-            (payload) => {
-              if (payload.new) {
-                applyRemoteCells([payload.new]);
-                saveCellsLocal();
-              }
-            }
-          )
-          .subscribe();
-      } catch (e) {
-        console.warn('Realtime subscribe skipped:', e);
-      }
-    }
-
-    async function syncUserStateToSupabase() {
-      if (!user) return;
-      const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
-      const metaUpdate = {
-        display_identifier: user.identifier,
-        vv_cell_floor: myCell ? myCell.floor : null,
-        vv_cell_id: myCell ? myCell.id : null,
-        vv_otp_code: otp.code && !otp.expired ? otp.code : null,
-        vv_otp_expires_at: otp.code && !otp.expired ? Date.now() + otp.remainingSec * 1000 : null
-      };
-
-      user.meta = Object.assign({}, user.meta, metaUpdate);
-      saveLocalSession(user);
-
-      if (supabaseClient) {
+      const cb = document.getElementById('remember-credentials-checkbox');
+      if (cb && !cb.checked) {
         try {
-          await supabaseClient.auth.updateUser({ data: metaUpdate });
-        } catch (e) {
-          console.warn('Supabase user metadata update skipped:', e);
-        }
+          localStorage.removeItem(STORAGE_KEYS.CREDS);
+        } catch (e) {}
       }
     }
 
     async function handleStudentLoginForm(event) {
       event.preventDefault();
-      const rawId = document.getElementById('input-student-id').value.trim();
-      const password = document.getElementById('input-student-pass').value;
-      if (!rawId || !password) return;
+      const idInput = document.getElementById('input-student-id');
+      const passInput = document.getElementById('input-student-pass');
+      const submitBtn = document.getElementById('auth-submit-btn');
 
-      if (password.length < 6) {
-        showToast('Короткий пароль', 'Введите пароль длиной от 6 символов.', 'warn');
+      const identifier = (idInput ? idInput.value : '').trim();
+      const password = passInput ? passInput.value : '';
+
+      if (!identifier || password.length < 6) {
+        showToast('Проверьте данные', 'Пароль должен содержать минимум 6 символов.', 'danger');
         return;
       }
 
-      saveCredentials(rawId, password);
-      const { email, display } = normalizeAuthIdentifier(rawId);
+      saveCredentialsIfChecked(identifier, password);
+      const email = normalizeAuthEmail(identifier);
 
-      const submitBtn = document.getElementById('auth-submit-btn');
-      const prevBtnText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Подключение...';
-
-      try {
-        if (supabaseClient) {
-          if (authMode === 'register') {
-            const { data, error } = await supabaseClient.auth.signUp({
-              email,
-              password,
-              options: { data: { display_identifier: display } }
-            });
-            if (error) throw error;
-
-            if (data.user) {
-              applySupabaseUser(data.user);
-              showToast('Регистрация выполнена', `Добро пожаловать, ${display}!`, 'free');
-              return;
-            }
-          } else {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-              email,
-              password
-            });
-            if (error) throw error;
-
-            if (data.user) {
-              applySupabaseUser(data.user);
-              showToast('Вход выполнен', `Вы вошли как ${display}`, 'free');
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        const msg = (err && err.message) ? err.message : 'Ошибка авторизации';
-        if (msg.toLowerCase().includes('invalid login')) {
-          showToast('Неверный логин или пароль', 'Проверьте данные или переключитесь на «Регистрация».', 'danger');
-          submitBtn.disabled = false;
-          submitBtn.textContent = prevBtnText;
-          return;
-        }
-        if (msg.toLowerCase().includes('already registered')) {
-          showToast('Аккаунт уже существует', 'Переключите вкладку на «Вход» и введите пароль.', 'warn');
-          setAuthMode('login');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Войти';
-          return;
-        }
-        console.warn('Supabase auth fallback:', msg);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = authMode === 'login' ? 'Войти' : 'Зарегистрироваться';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = authMode === 'login' ? 'Входим...' : 'Регистрируем...';
       }
 
-      // Резервный локальный вход при отсутствии сети
+      try {
+        if (!supabaseClient) throw new Error('Supabase client unavailable');
+
+        let authResult;
+        if (authMode === 'register') {
+          authResult = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { display_identifier: identifier }
+            }
+          });
+        } else {
+          authResult = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
+        }
+
+        if (authResult.error) {
+          throw authResult.error;
+        }
+
+        const sbUser = authResult.data && authResult.data.user;
+        if (!sbUser) {
+          throw new Error('Не удалось получить профиль пользователя');
+        }
+
+        applyAuthenticatedUser(sbUser, identifier);
+        showToast(
+          authMode === 'register' ? 'Регистрация выполнена' : 'Вход выполнен',
+          `Добро пожаловать, ${user.displayName}!`,
+          'free'
+        );
+      } catch (err) {
+        const msg = (err && err.message) ? err.message : 'Ошибка авторизации';
+        if (msg.toLowerCase().includes('invalid login credentials')) {
+          showToast('Неверный логин или пароль', 'Проверьте данные или переключитесь на регистрацию.', 'danger');
+        } else if (msg.toLowerCase().includes('already registered')) {
+          showToast('Аккаунт уже существует', 'Переключитесь на вкладку «Вход».', 'charging');
+          setAuthMode('login');
+        } else {
+          // Резервный локальный вход при проблемах сети
+          const fallbackUser = {
+            id: 'local_' + email,
+            email,
+            user_metadata: { display_identifier: identifier }
+          };
+          try {
+            localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(fallbackUser));
+          } catch (e) {}
+          applyAuthenticatedUser(fallbackUser, identifier);
+          showToast('Вход выполнен', `Вы вошли как ${user.displayName}.`, 'free');
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = authMode === 'login' ? 'Войти' : 'Зарегистрироваться';
+        }
+      }
+    }
+
+    function applyAuthenticatedUser(sbUser, fallbackIdentifier = '') {
+      const meta = sbUser.user_metadata || {};
+      const rawIdentifier = fallbackIdentifier || meta.display_identifier || sbUser.email || 'Пользователь';
+      const displayName = extractDisplayName(rawIdentifier);
+
       user = {
-        id: 'local-' + email,
-        identifier: display,
-        email,
-        meta: {}
+        id: sbUser.id,
+        email: sbUser.email || '',
+        identifier: rawIdentifier,
+        displayName,
+        meta
       };
-      saveLocalSession(user);
-      updateHeaderAvatar();
-      renderCabinetTab();
+
+      // Восстанавливаем закреплённую ячейку из метаданных Supabase (кроме #1 на 5 эт., которая управляется симуляцией)
+      if (meta.vv_cell_floor && meta.vv_cell_id) {
+        const f = Number(meta.vv_cell_floor);
+        const cid = Number(meta.vv_cell_id);
+        if (!(f === 5 && cid === 1)) {
+          const targetCell = getCell(f, cid);
+          if (targetCell) {
+            targetCell.status = 'charging';
+            targetCell.ownerId = user.id;
+            if (targetCell.remainingSec <= 0) targetCell.remainingSec = MAX_CHARGE_SEC;
+          }
+        }
+      }
+
+      // Восстанавливаем активный одноразовый код, если он ещё не истёк
+      if (meta.vv_otp_code && meta.vv_otp_expires_at) {
+        const diffSec = Math.floor((Number(meta.vv_otp_expires_at) - Date.now()) / 1000);
+        if (diffSec > 0) {
+          otp.code = String(meta.vv_otp_code);
+          otp.remainingSec = diffSec;
+          otp.expired = false;
+        }
+      }
+
+      updateHeaderBadge();
       renderCellsTab();
-      showToast('Вход выполнен', `Аккаунт: ${display}`, 'free');
+      renderCabinetTab();
+    }
+
+    async function restoreUserSession() {
+      if (supabaseClient) {
+        try {
+          const { data } = await supabaseClient.auth.getSession();
+          if (data && data.session && data.session.user) {
+            applyAuthenticatedUser(data.session.user);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.SESSION);
+        if (raw) {
+          const localUser = JSON.parse(raw);
+          if (localUser && localUser.id) {
+            applyAuthenticatedUser(localUser);
+          }
+        }
+      } catch (e) {}
     }
 
     async function logoutStudent() {
+      user = null;
+      otp.code = null;
+      otp.remainingSec = 0;
+      otp.expired = false;
+
+      try {
+        localStorage.removeItem(STORAGE_KEYS.SESSION);
+      } catch (e) {}
+
       if (supabaseClient) {
         try {
           await supabaseClient.auth.signOut();
         } catch (e) {}
       }
-      user = null;
-      otp.code = null;
-      otp.remainingSec = 0;
-      otp.expired = false;
-      clearLocalSession();
+
       loadSavedCredentials();
-      updateHeaderAvatar();
-      renderCabinetTab();
+      updateHeaderBadge();
       renderCellsTab();
-      showToast('Выход из кабинета', 'Сессия завершена.', 'warn');
+      renderCabinetTab();
+      showToast('Вы вышли из аккаунта', 'Логин и пароль сохранены для быстрого входа.', 'info');
     }
 
-    function updateHeaderAvatar() {
+    function updateHeaderBadge() {
       const badge = document.getElementById('header-user-badge');
       if (!badge) return;
+
       if (user) {
-        const initials = (user.identifier || 'ВВ').replace(/[^a-zA-Zа-яА-Я0-9]/g, '').slice(0, 2).toUpperCase() || 'ВВ';
-        badge.className = 'w-8 h-8 rounded-full bg-vv-lime text-vv-bg flex items-center justify-center text-xs font-extrabold transition';
-        badge.textContent = initials;
+        const initials = user.displayName.slice(0, 2).toUpperCase();
+        badge.className = 'w-8 h-8 rounded-full bg-vv-lime text-vv-bg flex items-center justify-center text-xs font-extrabold transition shadow-sm';
+        badge.textContent = initials || 'ВВ';
       } else {
         badge.className = 'w-8 h-8 rounded-full bg-vv-bg border border-vv-border hover:border-vv-lime/50 flex items-center justify-center text-xs font-bold text-vv-muted transition';
         badge.innerHTML = `
@@ -1662,12 +1619,84 @@
       }
     }
 
+    async function syncUserStateToSupabase() {
+      if (!supabaseClient || !user || String(user.id).startsWith('local_')) return;
+      const activeCell = getUserActiveCell();
+      const expiresAt = otp.code && !otp.expired && otp.remainingSec > 0
+        ? Date.now() + otp.remainingSec * 1000
+        : null;
+
+      try {
+        await supabaseClient.auth.updateUser({
+          data: {
+            display_identifier: user.identifier,
+            vv_cell_floor: activeCell ? activeCell.floor : null,
+            vv_cell_id: activeCell ? activeCell.id : null,
+            vv_otp_code: expiresAt ? otp.code : null,
+            vv_otp_expires_at: expiresAt
+          }
+        });
+      } catch (e) {}
+    }
+
+    async function loadCellsFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('vv_cells')
+          .select('*');
+
+        if (error || !Array.isArray(data)) return;
+        supabaseDbReady = true;
+
+        data.forEach((row) => {
+          const floor = Number(row.floor);
+          const id = Number(row.id);
+          // Ячейка #1 на 5 этаже всегда управляется живым сигналом симуляции
+          if (floor === 5 && id === 1) return;
+          const cell = getCell(floor, id);
+          if (!cell) return;
+          cell.status = row.status === 'charging' ? 'charging' : 'free';
+          cell.door = row.door === 'OPEN' ? 'OPEN' : 'CLOSED';
+          cell.remainingSec = Number(row.remaining_sec) || 0;
+          cell.relayOn = Boolean(row.relay_on);
+          cell.activeKey = row.active_key || null;
+          cell.ownerId = row.owner_id || null;
+        });
+
+        saveCellsLocal();
+        renderCellsTab();
+        renderCabinetTab();
+      } catch (e) {}
+    }
+
+    async function syncCellToSupabase(cell) {
+      if (!supabaseClient || !cell) return;
+      try {
+        await supabaseClient
+          .from('vv_cells')
+          .upsert({
+            floor: cell.floor,
+            id: cell.id,
+            status: cell.status,
+            door: cell.door,
+            battery: 0,
+            remaining_sec: cell.remainingSec,
+            relay_on: cell.relayOn,
+            active_key: cell.activeKey,
+            owner_id: cell.ownerId,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'floor,id' });
+      } catch (e) {}
+    }
+
     // -----------------------------------------------------------------------
-    // 7. ЛИЧНЫЙ КАБИНЕТ И ГЕНЕРАТОР ОДНОРАЗОВЫХ КОДОВ (10 / 15 МИНУТ)
+    // 7. ЛИЧНЫЙ КАБИНЕТ И ОДНОРАЗОВЫЙ КОД ПОЛУЧЕНИЯ (10 / 15 МИНУТ)
     // -----------------------------------------------------------------------
     function renderCabinetTab() {
       const loginScreen = document.getElementById('cab-login-screen');
       const dashScreen = document.getElementById('cab-dashboard-screen');
+      if (!loginScreen || !dashScreen) return;
 
       if (!user) {
         loginScreen.classList.remove('hidden');
@@ -1678,177 +1707,138 @@
       loginScreen.classList.add('hidden');
       dashScreen.classList.remove('hidden');
 
-      const initials = (user.identifier || 'ВВ').replace(/[^a-zA-Zа-яА-Я0-9]/g, '').slice(0, 2).toUpperCase() || 'ВВ';
-      document.getElementById('cab-user-avatar').textContent = initials;
-      document.getElementById('cab-user-name').textContent = user.identifier;
-      document.getElementById('cab-user-id').textContent = `${BUILDING_NAME} • Студент`;
+      const avatarEl = document.getElementById('cab-user-avatar');
+      const nameEl = document.getElementById('cab-user-name');
+      const idEl = document.getElementById('cab-user-id');
 
-      const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
+      if (avatarEl) avatarEl.textContent = user.displayName.slice(0, 2).toUpperCase();
+      if (nameEl) nameEl.textContent = user.displayName;
+      if (idEl) idEl.textContent = user.identifier;
+
+      const activeCell = getUserActiveCell();
       const noCellCard = document.getElementById('cab-no-cell-card');
       const activeCellCard = document.getElementById('cab-active-cell-card');
 
-      if (!myCell) {
-        noCellCard.classList.remove('hidden');
-        activeCellCard.classList.add('hidden');
+      if (!activeCell) {
+        if (noCellCard) noCellCard.classList.remove('hidden');
+        if (activeCellCard) activeCellCard.classList.add('hidden');
         return;
       }
 
-      noCellCard.classList.add('hidden');
-      activeCellCard.classList.remove('hidden');
+      if (noCellCard) noCellCard.classList.add('hidden');
+      if (activeCellCard) activeCellCard.classList.remove('hidden');
 
-      document.getElementById('cab-cell-number').textContent = `#${myCell.id}`;
-      document.getElementById('cab-cell-title').textContent = `Ячейка #${myCell.id} • ${myCell.floor} этаж`;
-      document.getElementById('cab-door-status').textContent = `${BUILDING_NAME} • ${myCell.door === 'OPEN' ? 'Дверь открыта' : 'Дверь закрыта'}`;
-
-      const relayPill = document.getElementById('cab-relay-pill');
+      const numEl = document.getElementById('cab-cell-number');
+      const titleEl = document.getElementById('cab-cell-title');
+      const doorEl = document.getElementById('cab-door-status');
       const timerEl = document.getElementById('cab-timer-hms');
-      const subEl = document.getElementById('cab-charge-substatus');
-      const finishBtn = document.getElementById('cab-btn-test-finish');
-
       const keyRow = document.getElementById('cab-mqtt-key-row');
-      if (myCell.activeKey && myCell.activeKey !== '-') {
-        keyRow.classList.remove('hidden');
-        document.getElementById('cab-mqtt-key-val').textContent = myCell.activeKey;
-      } else {
-        keyRow.classList.add('hidden');
-      }
+      const keyVal = document.getElementById('cab-mqtt-key-val');
 
-      relayPill.className = 'px-2.5 py-1 rounded-lg bg-vv-charging/15 border border-vv-charging/30 text-[11px] font-bold text-vv-charging shrink-0';
-      relayPill.textContent = myCell.door === 'OPEN' ? 'Ожидание двери' : 'Заряжается';
-      timerEl.className = 'text-2xl font-mono font-extrabold text-vv-charging shrink-0';
-      timerEl.textContent = myCell.door === 'OPEN' ? '--:--:--' : formatSecondsHMS(myCell.remainingSec);
-      subEl.textContent = myCell.door === 'OPEN'
-        ? 'Закройте дверцу ячейки для запуска'
-        : 'Заряжается';
-      finishBtn.textContent = 'Завершить зарядку и забрать телефон';
-      finishBtn.classList.remove('hidden');
+      if (numEl) numEl.textContent = `#${activeCell.id}`;
+      if (titleEl) titleEl.textContent = `Ячейка #${activeCell.id} • ${activeCell.floor} этаж`;
+      if (doorEl) doorEl.textContent = `${BUILDING_NAME} • Дверь ${activeCell.door === 'OPEN' ? 'открыта' : 'закрыта'}`;
+      if (timerEl) timerEl.textContent = formatSecondsHMS(activeCell.remainingSec);
+
+      const displayCode = otp.code || activeCell.activeKey;
+      if (keyRow && keyVal) {
+        if (displayCode && !otp.expired) {
+          keyRow.classList.remove('hidden');
+          keyVal.textContent = displayCode;
+        } else {
+          keyRow.classList.add('hidden');
+        }
+      }
 
       renderOtpBox();
     }
 
-    function finishChargingAndPickup() {
-      if (!user) return;
-      const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
-      if (!myCell) return;
-
-      const cellNum = myCell.id;
-      const cellFloor = myCell.floor;
-
-      // Через приложение ячейка сразу открывается и освобождается
-      myCell.status = 'free';
-      myCell.door = 'OPEN';
-      myCell.remainingSec = 0;
-      myCell.relayOn = false;
-      myCell.activeKey = null;
-      myCell.ownerId = null;
-
-      if (myCell.isHardware) {
-        hwState.status = 'FREE';
-        hwState.door = 'OPEN';
-        hwState.key = '-';
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN');
-        publishHardwareTopic(MQTT_TOPICS.KEY, '-');
-        updateTelemetrySheetData();
+    function selectOtpDuration(minutes) {
+      if (otp.code && !otp.expired && otp.remainingSec > 0) {
+        showToast('Код уже создан', 'Дождитесь истечения текущего кода получения.', 'charging');
+        return;
       }
 
-      otp.code = null;
-      otp.remainingSec = 0;
-      otp.expired = false;
-
-      saveCellsLocal();
-      syncCellToSupabase(myCell);
-      syncUserStateToSupabase();
-      renderCabinetTab();
-      renderCellsTab();
-
-      showToast(
-        `Ячейка #${cellNum} (${cellFloor} этаж) открыта`,
-        'Замок разблокирован. Заберите телефон и закройте дверцу.',
-        'free'
-      );
-    }
-
-    function selectOtpDuration(minutes) {
-      otp.durationMin = minutes;
+      otp.durationMin = minutes === 15 ? 15 : 10;
       const btn10 = document.getElementById('otp-dur-10');
       const btn15 = document.getElementById('otp-dur-15');
 
-      if (minutes === 10) {
-        btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
-        btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
+      if (otp.durationMin === 10) {
+        if (btn10) btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
+        if (btn15) btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
       } else {
-        btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
-        btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
+        if (btn15) btn15.className = 'py-2.5 px-3 rounded-xl bg-vv-lime/15 border border-vv-lime text-xs font-bold text-vv-lime transition';
+        if (btn10) btn10.className = 'py-2.5 px-3 rounded-xl bg-vv-bg border border-vv-border text-xs font-semibold text-vv-muted hover:text-vv-text transition';
       }
     }
 
     function generatePickupOtp() {
-      if (!user) return;
-      const myCell = getAllCells().find((c) => c.ownerId === user.id && c.status !== 'free');
-      if (!myCell) return;
+      const cell = getUserActiveCell();
+      if (!cell) return;
 
-      // Запрещаем бесконечную генерацию кодов, пока текущий код активен
+      // Запрет бесконечной генерации, пока текущий код активен
       if (otp.code && !otp.expired && otp.remainingSec > 0) {
-        showToast('Код уже активен', `Используйте текущий код ${otp.code} или дождитесь окончания таймера.`, 'warn');
+        showToast('Код уже активен', 'Используйте текущий код на терминале или дождитесь его завершения.', 'charging');
         return;
       }
 
-      otp.code = String(Math.floor(100000 + Math.random() * 900000));
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      otp.code = code;
       otp.remainingSec = otp.durationMin * 60;
       otp.expired = false;
 
-      myCell.activeKey = otp.code;
-      if (myCell.isHardware) {
-        hwState.key = otp.code;
-        publishHardwareTopic(MQTT_TOPICS.KEY, otp.code);
-        updateTelemetrySheetData();
+      cell.activeKey = code;
+      if (cell.floor === 5 && cell.id === 1) {
+        hwState.key = code;
+        publishHardwareTopic(MQTT_TOPICS.KEY, code);
       }
 
       saveCellsLocal();
-      syncCellToSupabase(myCell);
+      syncCellToSupabase(cell);
       syncUserStateToSupabase();
       renderCabinetTab();
-      showToast('Одноразовый код создан', `Код ${otp.code} активен ${otp.durationMin} минут.`, 'free');
+      showToast('Код получения создан', `Действует ${otp.durationMin} минут. Введите его на терминале.`, 'free');
     }
 
     function renderOtpBox() {
-      const box = document.getElementById('otp-active-box');
       const genBtn = document.getElementById('generate-otp-btn');
-      const hasActiveOtp = Boolean(otp.code && !otp.expired && otp.remainingSec > 0);
+      const activeBox = document.getElementById('otp-active-box');
+      const badgeEl = document.getElementById('otp-status-badge');
+      const timerEl = document.getElementById('otp-timer-display');
+      const codeEl = document.getElementById('otp-code-display');
+
+      const hasActiveCode = Boolean(otp.code && !otp.expired && otp.remainingSec > 0);
 
       if (genBtn) {
-        genBtn.disabled = hasActiveOtp;
-        if (hasActiveOtp) {
+        if (hasActiveCode) {
+          genBtn.disabled = true;
           genBtn.className = 'w-full py-3 px-4 rounded-xl bg-vv-bg border border-vv-border text-vv-muted font-bold text-xs cursor-not-allowed opacity-60 transition';
-          genBtn.textContent = 'Код получения уже сгенерирован';
+          genBtn.textContent = 'Код получения уже активен';
         } else {
+          genBtn.disabled = false;
           genBtn.className = 'w-full py-3 px-4 rounded-xl bg-vv-lime hover:bg-vv-limeHover active:scale-[0.99] text-vv-bg font-extrabold text-xs transition';
           genBtn.textContent = 'Сгенерировать код получения';
         }
       }
 
-      if (!box) return;
-
+      if (!activeBox) return;
       if (!otp.code) {
-        box.classList.add('hidden');
+        activeBox.classList.add('hidden');
         return;
       }
 
-      box.classList.remove('hidden');
-      const statusBadge = document.getElementById('otp-status-badge');
-      const timerDisp = document.getElementById('otp-timer-display');
-      const codeDisp = document.getElementById('otp-code-display');
+      activeBox.classList.remove('hidden');
+      if (codeEl) codeEl.textContent = otp.code;
+      if (timerEl) timerEl.textContent = formatSecondsMS(otp.remainingSec);
 
-      codeDisp.textContent = otp.code;
-      if (otp.expired || otp.remainingSec <= 0) {
-        statusBadge.className = 'px-2 py-0.5 rounded-md bg-vv-danger/15 border border-vv-danger/30 text-[11px] font-bold text-vv-danger';
-        statusBadge.textContent = 'Истёк';
-        timerDisp.textContent = '00:00';
-      } else {
-        statusBadge.className = 'px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[11px] font-bold text-vv-free';
-        statusBadge.textContent = 'Активен';
-        timerDisp.textContent = formatSecondsMS(otp.remainingSec);
+      if (badgeEl) {
+        if (hasActiveCode) {
+          badgeEl.className = 'px-2 py-0.5 rounded-md bg-vv-free/15 border border-vv-free/30 text-[11px] font-bold text-vv-free';
+          badgeEl.textContent = 'Активен';
+        } else {
+          badgeEl.className = 'px-2 py-0.5 rounded-md bg-vv-danger/15 border border-vv-danger/30 text-[11px] font-bold text-vv-danger';
+          badgeEl.textContent = 'Истёк';
+        }
       }
     }
 
@@ -1858,14 +1848,27 @@
       tempInput.value = otp.code;
       document.body.appendChild(tempInput);
       tempInput.select();
-      document.execCommand('copy');
+      try {
+        document.execCommand('copy');
+        showToast('Код скопирован', `Код ${otp.code} скопирован в буфер обмена.`, 'free');
+      } catch (e) {}
       document.body.removeChild(tempInput);
-      showToast('Код скопирован', `Одноразовый код ${otp.code} в буфере обмена.`, 'free');
     }
 
     // -----------------------------------------------------------------------
     // 8. MQTT СИНХРОНИЗАЦИЯ ЯЧЕЙКИ #1 (5 ЭТАЖ 8 КОРПУСА) С HIVEMQ / ESP32
     // -----------------------------------------------------------------------
+    function flushPendingMqttPublishes() {
+      if (!mqttClient || !mqttClient.connected) return;
+      const topics = Object.keys(pendingMqttPublishes);
+      topics.forEach((topic) => {
+        try {
+          mqttClient.publish(topic, String(pendingMqttPublishes[topic]), { retain: false });
+          delete pendingMqttPublishes[topic];
+        } catch (e) {}
+      });
+    }
+
     function initMqtt() {
       if (!window.mqtt) return;
       try {
@@ -1873,27 +1876,52 @@
         mqttClient = window.mqtt.connect(MQTT_BROKER_URL, {
           clientId,
           clean: true,
-          connectTimeout: 5000,
-          reconnectPeriod: 4000
+          keepalive: 25,
+          connectTimeout: 15000,
+          reconnectPeriod: 2000
         });
 
         mqttClient.on('connect', () => {
-          mqttClient.subscribe([MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY]);
+          mqttClient.subscribe(['locker_project/#', MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY]);
+          flushPendingMqttPublishes();
         });
 
         mqttClient.on('message', (topic, message) => {
+          const cleanTopic = String(topic || '').trim().toLowerCase();
           const val = message.toString().trim();
-          if (topic === MQTT_TOPICS.STATUS) hwState.status = val;
-          if (topic === MQTT_TOPICS.DOOR) hwState.door = val;
-          if (topic === MQTT_TOPICS.KEY) hwState.key = val;
+          const upperVal = val.toUpperCase();
+
+          if (cleanTopic === MQTT_TOPICS.STATUS) {
+            hwState.status = upperVal;
+          } else if (cleanTopic === MQTT_TOPICS.DOOR) {
+            hwState.door = upperVal;
+          } else if (cleanTopic === MQTT_TOPICS.KEY) {
+            const prevKey = hwState.key;
+            hwState.key = val;
+            if (
+              hwState.status === 'IN_USE' &&
+              prevKey &&
+              prevKey !== '-' &&
+              (val === '-' || val === '' || upperVal === 'NONE' || upperVal === 'USED' || upperVal === 'CLEARED')
+            ) {
+              hwState.status = 'FREE';
+            }
+          } else {
+            return;
+          }
 
           const hwCell = getHardwareCell();
           if (hwCell) {
+            const wasOccupied = hwCell.status !== 'free';
             applyHardwareStateToCell(hwCell);
             saveCellsLocal();
             updateTelemetrySheetData();
             renderCellsTab();
             renderCabinetTab();
+
+            if (wasOccupied && hwCell.status === 'free') {
+              showToast('Ячейка #1 освобождена', 'Телефон получен, ячейка снова свободна.', 'free');
+            }
           }
         });
       } catch (e) {
@@ -1902,18 +1930,25 @@
     }
 
     function publishHardwareTopic(topic, payload) {
+      const strPayload = String(payload);
       if (mqttClient && mqttClient.connected) {
         try {
-          mqttClient.publish(topic, String(payload), { retain: false });
+          mqttClient.publish(topic, strPayload, { retain: false });
+          return;
         } catch (e) {}
       }
+      pendingMqttPublishes[topic] = strPayload;
     }
 
     function applyHardwareStateToCell(hwCell) {
-      hwCell.door = hwState.door === 'OPEN' ? 'OPEN' : 'CLOSED';
-      hwCell.activeKey = hwState.key && hwState.key !== '-' ? hwState.key : null;
+      const upperStatus = String(hwState.status || '').toUpperCase();
+      const upperDoor = String(hwState.door || '').toUpperCase();
+      const rawKey = String(hwState.key || '').trim();
 
-      if (hwState.status === 'IN_USE') {
+      hwCell.door = upperDoor === 'OPEN' ? 'OPEN' : 'CLOSED';
+      hwCell.activeKey = rawKey && rawKey !== '-' && rawKey.toUpperCase() !== 'NONE' ? rawKey : null;
+
+      if (upperStatus === 'IN_USE' || upperStatus === 'OCCUPIED' || upperStatus === 'CHARGING' || upperStatus === 'BUSY') {
         hwCell.status = 'charging';
         if (user && !hwCell.ownerId) {
           hwCell.ownerId = user.id;
@@ -1925,14 +1960,20 @@
           if (hwCell.remainingSec <= 0) hwCell.remainingSec = MAX_CHARGE_SEC;
         }
       } else {
-        // FREE или EXPIRED сразу возвращают ячейку в статус "Свободна"
+        const wasMine = user && hwCell.ownerId === user.id;
         hwCell.status = 'free';
         hwCell.remainingSec = 0;
         hwCell.relayOn = false;
         hwCell.ownerId = null;
-        if (hwState.status === 'FREE') {
-          hwCell.activeKey = null;
+        hwCell.activeKey = null;
+
+        if (wasMine) {
+          otp.code = null;
+          otp.remainingSec = 0;
+          otp.expired = false;
+          syncUserStateToSupabase();
         }
+        syncCellToSupabase(hwCell);
       }
     }
 
@@ -1945,17 +1986,20 @@
       const keyEl = document.getElementById('tel-key-val');
       const chargeEl = document.getElementById('tel-charge-timer-val');
       const actionBtn = document.getElementById('tel-action-btn');
+      const resetFreeBtn = document.getElementById('tel-reset-free-btn');
 
       if (hwCell.status === 'free') {
         statusEl.className = 'font-bold text-vv-free';
         statusEl.textContent = 'Свободна';
         actionBtn.textContent = user ? 'Занять Ячейку #1' : 'Войти и занять Ячейку #1';
+        if (resetFreeBtn) resetFreeBtn.classList.add('hidden');
       } else {
         statusEl.className = 'font-bold text-vv-charging';
         statusEl.textContent = 'Заряжается';
         actionBtn.textContent = (user && hwCell.ownerId === user.id)
           ? 'Открыть ячейку и забрать телефон'
           : 'Открыть в личном кабинете';
+        if (resetFreeBtn) resetFreeBtn.classList.remove('hidden');
       }
 
       doorEl.textContent = hwCell.door === 'OPEN' ? 'Открыта' : 'Закрыта';
@@ -1964,56 +2008,47 @@
     }
 
     // -----------------------------------------------------------------------
-    // 9. УВЕДОМЛЕНИЯ (TOAST) И ТАЙМЕРЫ РЕАЛЬНОГО ВРЕМЕНИ
+    // 9. СЕКУНДНЫЙ ТАЙМЕР СЕССИЙ И КОДОВ ПОЛУЧЕНИЯ
     // -----------------------------------------------------------------------
-    function showToast(title, message, type = 'free') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
-
-      const accentMap = {
-        free: 'border-vv-free/40 text-vv-free',
-        warn: 'border-vv-charging/40 text-vv-charging',
-        danger: 'border-vv-danger/40 text-vv-danger'
-      };
-      const accent = accentMap[type] || accentMap.free;
-
-      const el = document.createElement('div');
-      el.className = `pointer-events-auto bg-vv-elevated/95 backdrop-blur-md border ${accent} rounded-2xl px-3.5 py-2.5 shadow-xl transition-all duration-200`;
-      el.innerHTML = `
-        <div class="text-xs font-extrabold">${title}</div>
-        <div class="text-[11px] text-vv-text/90 mt-0.5">${message}</div>
-      `;
-
-      container.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-6px)';
-        setTimeout(() => el.remove(), 220);
-      }, 3200);
-    }
-
-    function startTimers() {
+    function startMainTicker() {
       setInterval(() => {
         let cellsChanged = false;
 
-        getAllCells().forEach((cell) => {
-          if (cell.status === 'charging' && cell.relayOn && cell.remainingSec > 0) {
-            cell.remainingSec -= 1;
-            if (cell.remainingSec <= 0) {
-              cell.status = 'free';
-              cell.remainingSec = 0;
-              cell.relayOn = false;
-              cell.activeKey = null;
-              cell.ownerId = null;
-              if (cell.isHardware) {
-                hwState.status = 'FREE';
-                hwState.key = '-';
-                publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-                publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+        FLOORS.forEach((floor) => {
+          const list = getFloorCells(floor);
+          list.forEach((cell) => {
+            if (cell.status !== 'free' && cell.remainingSec > 0) {
+              cell.remainingSec -= 1;
+              cellsChanged = true;
+
+              if (cell.remainingSec <= 0) {
+                const wasMine = user && cell.ownerId === user.id;
+                cell.status = 'free';
+                cell.door = 'CLOSED';
+                cell.remainingSec = 0;
+                cell.relayOn = false;
+                cell.activeKey = null;
+                cell.ownerId = null;
+
+                if (floor === 5 && cell.id === 1) {
+                  hwState.status = 'FREE';
+                  hwState.door = 'CLOSED';
+                  hwState.key = '-';
+                  publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
+                  publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+                }
+
+                if (wasMine) {
+                  otp.code = null;
+                  otp.remainingSec = 0;
+                  otp.expired = false;
+                  syncUserStateToSupabase();
+                  showToast('Время зарядки вышло', `Ячейка #${cell.id} снова свободна.`, 'free');
+                }
+                syncCellToSupabase(cell);
               }
             }
-            cellsChanged = true;
-          }
+          });
         });
 
         if (otp.code && !otp.expired && otp.remainingSec > 0) {
@@ -2021,18 +2056,24 @@
           if (otp.remainingSec <= 0) {
             otp.remainingSec = 0;
             otp.expired = true;
+            const myCell = getUserActiveCell();
+            if (myCell) {
+              myCell.activeKey = null;
+              if (myCell.floor === 5 && myCell.id === 1) {
+                hwState.key = '-';
+                publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+              }
+              syncCellToSupabase(myCell);
+            }
+            syncUserStateToSupabase();
+            showToast('Срок кода истёк', 'Теперь можно сгенерировать новый код получения.', 'charging');
           }
-          if (activeTab === 'cabinet') {
-            renderOtpBox();
-          }
+          if (activeTab === 'cabinet') renderOtpBox();
         }
 
         if (cellsChanged) {
-          if (activeTab === 'cells') {
-            renderCellsTab();
-          } else {
-            renderCabinetTab();
-          }
+          if (activeTab === 'cells') renderCellsTab();
+          if (activeTab === 'cabinet') renderCabinetTab();
           updateTelemetrySheetData();
         }
       }, 1000);
@@ -2046,34 +2087,28 @@
       }
     });
 
+    // Переподключение канала при возврате на вкладку с симуляции
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && mqttClient && !mqttClient.connected) {
+        try {
+          mqttClient.reconnect();
+        } catch (e) {}
+      }
+    });
+
     // -----------------------------------------------------------------------
     // 10. ЗАПУСК ПРИЛОЖЕНИЯ
     // -----------------------------------------------------------------------
-    window.onload = function () {
-      if (!loadCellsLocal()) {
-        cellsByFloor = buildInitialCells();
-        saveCellsLocal();
-      }
-
+    window.addEventListener('DOMContentLoaded', async () => {
+      initAllCells();
       loadSavedCredentials();
-
-      const cachedUser = restoreLocalSession();
-      if (cachedUser) {
-        user = cachedUser;
-        if (user.meta) {
-          restoreUserBindingFromMeta(user.meta);
-        }
-        updateHeaderAvatar();
-      }
-
-      renderFloorDropdown();
-      renderCellsTab();
-      renderCabinetTab();
-
       initSupabase();
       initMqtt();
-      startTimers();
-    };
+      renderCellsTab();
+      await restoreUserSession();
+      await loadCellsFromSupabase();
+      startMainTicker();
+    });
   </script>
 </body>
 </html>
