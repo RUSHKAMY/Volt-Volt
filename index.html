@@ -1283,8 +1283,6 @@
       if (cell.floor === 5 && cell.id === 1) {
         hwState.status = 'OPEN_TO_PUT';
         hwState.door = 'OPEN';
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN', true);
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'OPEN_TO_PUT', true);
         publishHardwareTopic(MQTT_TOPICS.CMD, 'OCCUPY', false);
       }
 
@@ -1308,8 +1306,6 @@
       if (cell.floor === 5 && cell.id === 1) {
         hwState.status = 'IN_USE';
         hwState.door = 'CLOSED';
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE', true);
         publishHardwareTopic(MQTT_TOPICS.CMD, 'CLOSE_DOOR', false);
       }
 
@@ -1342,33 +1338,37 @@
         hwState.status = 'FREE';
         hwState.door = 'CLOSED';
         hwState.key = '-';
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE', true);
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
-        publishHardwareTopic(MQTT_TOPICS.KEY, '-', true);
         publishHardwareTopic(MQTT_TOPICS.CMD, 'FREE', false);
       }
 
       saveCellsLocal();
       syncCellToSupabase(cell);
       syncUserStateToSupabase();
+      updateTelemetrySheetData();
       renderCellsTab();
       renderCabinetTab();
-      showToast(`Ячейка #${freedId} открыта`, 'Зарядка завершена, ячейка снова свободна.', 'free');
+      showToast(`Ячейка #${freedId} открыта`, 'Заберите телефон — ячейка освобождена.', 'free');
     }
 
     function handleTelemetrySheetAction() {
       const hwCell = getHardwareCell();
+      if (!hwCell) return;
+
       closeBottomSheet('sheet-telemetry-backdrop');
 
       if (!user) {
         switchTab('cabinet');
+        showToast('Требуется вход', 'Войдите в личный кабинет, чтобы занять Ячейку #1.', 'info');
         return;
       }
 
-      if (hwCell && hwCell.status === 'free') {
+      if (hwCell.status === 'free') {
         pendingOccupyTarget = { floor: 5, id: 1 };
         confirmOccupySelectedCell();
-      } else if (hwCell && hwCell.ownerId === user.id) {
+        return;
+      }
+
+      if (hwCell.ownerId === user.id) {
         finishChargingAndPickup();
       } else {
         switchTab('cabinet');
@@ -1379,9 +1379,7 @@
       const hwCell = getHardwareCell();
       if (!hwCell) return;
 
-      hwState.status = 'FREE';
-      hwState.door = 'CLOSED';
-      hwState.key = '-';
+      const wasMine = Boolean(user && hwCell.ownerId === user.id);
 
       hwCell.status = 'free';
       hwCell.door = 'CLOSED';
@@ -1390,75 +1388,100 @@
       hwCell.activeKey = null;
       hwCell.ownerId = null;
 
-      otp.code = null;
-      otp.remainingSec = 0;
-      otp.expired = false;
-      publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE', true);
-      publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
-      publishHardwareTopic(MQTT_TOPICS.KEY, '-', true);
+      hwState.status = 'FREE';
+      hwState.door = 'CLOSED';
+      hwState.key = '-';
+
+      if (wasMine) {
+        otp.code = null;
+        otp.remainingSec = 0;
+        otp.expired = false;
+      }
+
       publishHardwareTopic(MQTT_TOPICS.CMD, 'FREE', false);
+      publishHardwareTopic(
+        MQTT_TOPICS.STATE,
+        JSON.stringify({ status: 'FREE', door: 'CLOSED', key: '-', rem: 0 }),
+        true
+      );
 
       saveCellsLocal();
       syncCellToSupabase(hwCell);
       syncUserStateToSupabase();
+      closeBottomSheet('sheet-telemetry-backdrop');
       updateTelemetrySheetData();
       renderCellsTab();
       renderCabinetTab();
-      closeBottomSheet('sheet-telemetry-backdrop');
-      showToast('Ячейка #1 свободна', 'Статус ячейки синхронизирован.', 'free');
+      showToast('Ячейка #1 сброшена', 'Статус принудительно обновлён на «Свободна».', 'free');
     }
 
     // -----------------------------------------------------------------------
-    // 6. SUPABASE AUTH + СОХРАНЕНИЕ ДАННЫХ + ЗАПОМИНАНИЕ ЛОГИНА/ПАРОЛЯ
+    // 6. АВТОРИЗАЦИЯ И СИНХРОНИЗАЦИЯ SUPABASE
     // -----------------------------------------------------------------------
     function initSupabase() {
-      if (!window.supabase) return;
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        return;
+      }
       try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Realtime-подписка на таблицу vv_cells (кроме Ячейки #1 на 5 этаже — она на MQTT)
+        supabaseClient
+          .channel('vv_cells_realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'vv_cells' },
+            (payload) => {
+              const row = payload && payload.new;
+              if (!row) return;
+              const floor = Number(row.floor);
+              const id = Number(row.id);
+              if (floor === 5 && id === 1) return;
+
+              const cell = getCell(floor, id);
+              if (!cell) return;
+              const validStatuses = ['free', 'charging', 'awaiting_pickup'];
+              cell.status = validStatuses.includes(row.status) ? row.status : 'free';
+              cell.door = row.door === 'OPEN' ? 'OPEN' : 'CLOSED';
+              cell.remainingSec = Number(row.remaining_sec) || 0;
+              cell.relayOn = Boolean(row.relay_on);
+              cell.activeKey = row.active_key || null;
+              cell.ownerId = row.owner_id || null;
+
+              saveCellsLocal();
+              if (activeTab === 'cells') renderCellsTab();
+              if (activeTab === 'cabinet') renderCabinetTab();
+            }
+          )
+          .subscribe();
       } catch (e) {
-        console.warn('Supabase init failed:', e);
+        console.warn('Supabase init skipped:', e);
       }
-    }
-
-    function normalizeAuthEmail(identifier) {
-      const trimmed = String(identifier || '').trim();
-      if (trimmed.includes('@')) return trimmed.toLowerCase();
-      const digits = trimmed.replace(/\D/g, '');
-      const cleanPhone = digits || trimmed.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
-      return `${cleanPhone}@voltvolt.local`;
-    }
-
-    function extractDisplayName(identifier) {
-      const trimmed = String(identifier || '').trim();
-      if (trimmed.endsWith('@voltvolt.local')) {
-        return trimmed.split('@')[0] || 'Пользователь';
-      }
-      return trimmed || 'Пользователь';
     }
 
     function setAuthMode(mode) {
       authMode = mode === 'register' ? 'register' : 'login';
       const tabLogin = document.getElementById('auth-tab-login');
-      const tabReg = document.getElementById('auth-tab-register');
+      const tabRegister = document.getElementById('auth-tab-register');
       const titleEl = document.getElementById('auth-card-title');
-      const subEl = document.getElementById('auth-card-subtitle');
+      const subtitleEl = document.getElementById('auth-card-subtitle');
       const submitBtn = document.getElementById('auth-submit-btn');
       const switchBtn = document.getElementById('auth-switch-mode-btn');
 
       if (authMode === 'login') {
         if (tabLogin) tabLogin.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
-        if (tabReg) tabReg.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
+        if (tabRegister) tabRegister.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
         if (titleEl) titleEl.textContent = 'Вход в кабинет';
-        if (subEl) subEl.textContent = 'Авторизация в системе Вольт Вольт';
+        if (subtitleEl) subtitleEl.textContent = 'Авторизация в системе Вольт Вольт';
         if (submitBtn) submitBtn.textContent = 'Войти';
         if (switchBtn) switchBtn.innerHTML = 'Нет аккаунта? <span class="text-vv-lime font-bold">Регистрация</span>';
       } else {
-        if (tabReg) tabReg.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
+        if (tabRegister) tabRegister.className = 'py-2 rounded-lg bg-vv-lime text-vv-bg text-xs font-extrabold transition';
         if (tabLogin) tabLogin.className = 'py-2 rounded-lg text-vv-muted hover:text-vv-text text-xs font-semibold transition';
         if (titleEl) titleEl.textContent = 'Регистрация';
-        if (subEl) subEl.textContent = 'Создайте аккаунт для доступа к ячейкам';
+        if (subtitleEl) subtitleEl.textContent = 'Создайте аккаунт для бронирования ячеек';
         if (submitBtn) submitBtn.textContent = 'Зарегистрироваться';
-        if (switchBtn) switchBtn.innerHTML = 'Уже есть аккаунт? <span class="text-vv-lime font-bold">Вход</span>';
+        if (switchBtn) switchBtn.innerHTML = 'Уже есть аккаунт? <span class="text-vv-lime font-bold">Войти</span>';
       }
     }
 
@@ -1475,95 +1498,136 @@
     function loadSavedCredentials() {
       try {
         const raw = localStorage.getItem(STORAGE_KEYS.CREDS);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
         const idInput = document.getElementById('input-student-id');
         const passInput = document.getElementById('input-student-pass');
-        const cb = document.getElementById('remember-credentials-checkbox');
-        if (idInput && parsed.identifier) idInput.value = parsed.identifier;
-        if (passInput && parsed.password) passInput.value = parsed.password;
-        if (cb) cb.checked = true;
+        const checkbox = document.getElementById('remember-credentials-checkbox');
+        if (!raw) return;
+
+        const saved = JSON.parse(raw);
+        if (idInput && saved.identifier) idInput.value = saved.identifier;
+        if (passInput && saved.password) passInput.value = saved.password;
+        if (checkbox) checkbox.checked = true;
       } catch (e) {}
     }
 
-    function saveCredentialsIfChecked(identifier, password) {
-      const cb = document.getElementById('remember-credentials-checkbox');
-      if (cb && cb.checked) {
-        try {
+    function saveCredentialsIfNeeded(identifier, password) {
+      const checkbox = document.getElementById('remember-credentials-checkbox');
+      try {
+        if (checkbox && checkbox.checked) {
           localStorage.setItem(STORAGE_KEYS.CREDS, JSON.stringify({ identifier, password }));
-        } catch (e) {}
-      } else {
-        try {
+        } else {
           localStorage.removeItem(STORAGE_KEYS.CREDS);
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
     }
 
     function handleRememberToggle() {
-      const cb = document.getElementById('remember-credentials-checkbox');
-      if (cb && !cb.checked) {
-        try {
+      const checkbox = document.getElementById('remember-credentials-checkbox');
+      const idInput = document.getElementById('input-student-id');
+      const passInput = document.getElementById('input-student-pass');
+      if (!checkbox) return;
+
+      try {
+        if (!checkbox.checked) {
           localStorage.removeItem(STORAGE_KEYS.CREDS);
-        } catch (e) {}
+        } else if (idInput && passInput && idInput.value.trim()) {
+          localStorage.setItem(
+            STORAGE_KEYS.CREDS,
+            JSON.stringify({ identifier: idInput.value.trim(), password: passInput.value })
+          );
+        }
+      } catch (e) {}
+    }
+
+    function normalizeAuthIdentifier(rawInput) {
+      const trimmed = String(rawInput || '').trim();
+      if (trimmed.includes('@')) {
+        return trimmed.toLowerCase();
       }
+      let digits = trimmed.replace(/\D/g, '');
+      if (digits.length === 11 && digits.startsWith('8')) {
+        digits = '7' + digits.slice(1);
+      }
+      if (digits.length >= 6) {
+        return `${digits}@voltvolt.local`;
+      }
+      const slug = trimmed.toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'user';
+      return `${slug}@voltvolt.local`;
+    }
+
+    function extractDisplayName(rawIdentifier) {
+      const str = String(rawIdentifier || '').trim();
+      if (!str) return 'Пользователь';
+      if (str.endsWith('@voltvolt.local')) {
+        return str.replace('@voltvolt.local', '');
+      }
+      if (str.includes('@')) {
+        return str.split('@')[0];
+      }
+      return str;
     }
 
     async function handleStudentLoginForm(event) {
       event.preventDefault();
+
       const idInput = document.getElementById('input-student-id');
       const passInput = document.getElementById('input-student-pass');
       const submitBtn = document.getElementById('auth-submit-btn');
 
-      const identifier = (idInput ? idInput.value : '').trim();
+      const identifier = idInput ? idInput.value.trim() : '';
       const password = passInput ? passInput.value : '';
 
-      if (!identifier || password.length < 6) {
-        showToast('Проверьте данные', 'Пароль должен содержать минимум 6 символов.', 'danger');
+      if (!identifier || !password) {
+        showToast('Заполните все поля', 'Введите почту или телефон и пароль.', 'charging');
         return;
       }
 
-      saveCredentialsIfChecked(identifier, password);
-      const email = normalizeAuthEmail(identifier);
+      if (password.length < 6) {
+        showToast('Короткий пароль', 'Пароль должен содержать минимум 6 символов.', 'charging');
+        return;
+      }
+
+      const email = normalizeAuthIdentifier(identifier);
+      saveCredentialsIfNeeded(identifier, password);
 
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = authMode === 'login' ? 'Входим...' : 'Регистрируем...';
+        submitBtn.textContent = authMode === 'login' ? 'Выполняем вход...' : 'Регистрируем...';
       }
 
       try {
-        if (!supabaseClient) throw new Error('Supabase client unavailable');
+        if (!supabaseClient) {
+          throw new Error('Supabase client unavailable');
+        }
 
-        let authResult;
         if (authMode === 'register') {
-          authResult = await supabaseClient.auth.signUp({
+          const { data, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
               data: { display_identifier: identifier }
             }
           });
+          if (error) throw error;
+
+          if (data && data.user) {
+            applyAuthenticatedUser(data.user, identifier);
+            showToast('Регистрация выполнена', `Добро пожаловать, ${user.displayName}!`, 'free');
+          } else {
+            showToast('Проверьте почту', 'Подтвердите регистрацию по ссылке из письма.', 'info');
+          }
         } else {
-          authResult = await supabaseClient.auth.signInWithPassword({
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
             password
           });
-        }
+          if (error) throw error;
 
-        if (authResult.error) {
-          throw authResult.error;
+          if (data && data.user) {
+            applyAuthenticatedUser(data.user, identifier);
+            showToast('Вход выполнен', `Вы вошли как ${user.displayName}.`, 'free');
+          }
         }
-
-        const sbUser = authResult.data && authResult.data.user;
-        if (!sbUser) {
-          throw new Error('Не удалось получить профиль пользователя');
-        }
-
-        applyAuthenticatedUser(sbUser, identifier);
-        showToast(
-          authMode === 'register' ? 'Регистрация выполнена' : 'Вход выполнен',
-          `Добро пожаловать, ${user.displayName}!`,
-          'free'
-        );
       } catch (err) {
         const msg = (err && err.message) ? err.message : 'Ошибка авторизации';
         if (msg.toLowerCase().includes('invalid login credentials')) {
@@ -1919,7 +1983,6 @@
       cell.activeKey = code;
       if (cell.floor === 5 && cell.id === 1) {
         hwState.key = code;
-        publishHardwareTopic(MQTT_TOPICS.KEY, code, true);
         publishHardwareTopic(MQTT_TOPICS.CMD, `KEY:${code}`, false);
       }
 
@@ -1990,11 +2053,9 @@
     // -----------------------------------------------------------------------
     function subscribeHardwareTopics() {
       if (!mqttClient || !mqttClient.connected) return;
-      const topics = [MQTT_TOPICS.STATE, MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY];
       try {
-        mqttClient.unsubscribe(topics, () => {
-          mqttClient.subscribe(topics, { qos: 0 });
-        });
+        mqttClient.subscribe(MQTT_TOPICS.STATE, { qos: 1 });
+        mqttClient.publish(MQTT_TOPICS.CMD, 'SYNC', { qos: 0, retain: false });
       } catch (e) {}
     }
 
@@ -2004,7 +2065,7 @@
       keys.forEach((k) => {
         const item = pendingMqttPublishes[k];
         try {
-          mqttClient.publish(item.topic, String(item.payload), { retain: item.retain });
+          mqttClient.publish(item.topic, String(item.payload), { qos: 1, retain: item.retain });
           delete pendingMqttPublishes[k];
         } catch (e) {}
       });
@@ -2022,9 +2083,10 @@
         mqttClient = window.mqtt.connect(MQTT_BROKER_URL, {
           clientId,
           clean: true,
-          keepalive: 20,
+          keepalive: 15,
           connectTimeout: 15000,
-          reconnectPeriod: 1500
+          reconnectPeriod: 1500,
+          resubscribe: true
         });
 
         mqttClient.on('connect', () => {
@@ -2113,11 +2175,11 @@
       }
     }
 
-    function publishHardwareTopic(topic, payload, retain = true) {
+    function publishHardwareTopic(topic, payload, retain = false) {
       const strPayload = String(payload);
       if (mqttClient && mqttClient.connected) {
         try {
-          mqttClient.publish(topic, strPayload, { retain });
+          mqttClient.publish(topic, strPayload, { qos: 1, retain });
           return;
         } catch (e) {}
       }
@@ -2251,7 +2313,6 @@
                 if (floor === 5 && cell.id === 1) {
                   hwState.status = 'AWAITING_PICKUP';
                   hwState.door = 'CLOSED';
-                  publishHardwareTopic(MQTT_TOPICS.STATUS, 'AWAITING_PICKUP');
                 }
 
                 if (wasMine) {
@@ -2274,7 +2335,7 @@
               myCell.activeKey = null;
               if (myCell.floor === 5 && myCell.id === 1) {
                 hwState.key = '-';
-                publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+                publishHardwareTopic(MQTT_TOPICS.CMD, 'KEY:-', false);
               }
               syncCellToSupabase(myCell);
             }
@@ -2300,11 +2361,11 @@
       }
     });
 
-    // Переподключение и повторная подписка при возврате на вкладку с симуляции
+    // Переподключение и повторная синхронизация при возврате на вкладку с симуляции
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && mqttClient) {
         if (mqttClient.connected) {
-          subscribeHardwareTopics();
+          mqttClient.publish(MQTT_TOPICS.CMD, 'SYNC', { qos: 0, retain: false });
         } else {
           try {
             mqttClient.reconnect();
