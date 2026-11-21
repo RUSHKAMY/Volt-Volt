@@ -13,8 +13,8 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- MQTT.js для подключения к HiveMQ по WebSocket -->
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- MQTT.js для подключения к HiveMQ по WebSocket (с резервным CDN) -->
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.1/mqtt.min.js';"></script>
 
   <!-- Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -231,7 +231,7 @@
 
             <div class="flex items-center gap-2 shrink-0">
               <span id="dropdown-free-badge" class="px-2.5 py-1 rounded-lg bg-vv-free/10 border border-vv-free/25 text-xs font-extrabold text-vv-free">
-                40 / 50
+                42 / 50
               </span>
               <div class="w-7 h-7 rounded-lg bg-vv-bg border border-vv-border flex items-center justify-center text-vv-muted">
                 <svg id="dropdown-chevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
@@ -254,16 +254,16 @@
         <div class="bg-vv-card border border-vv-border rounded-2xl p-3">
           <div class="flex items-center justify-between mb-2">
             <span id="summary-floor-label" class="text-[11px] font-medium text-vv-muted">Состояние ячеек • 5 этаж</span>
-            <span id="summary-free-ratio" class="text-xs font-extrabold text-vv-free">43 / 50 свободно</span>
+            <span id="summary-free-ratio" class="text-xs font-extrabold text-vv-free">42 / 50 свободно</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">43</div>
+              <div id="stat-free" class="text-base font-extrabold text-vv-free leading-tight">42</div>
               <div class="text-[11px] text-vv-muted mt-0.5">Свободно</div>
             </div>
             <div class="bg-vv-bg border border-vv-border rounded-xl py-2 px-2 text-center">
-              <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">7</div>
+              <div id="stat-charging" class="text-base font-extrabold text-vv-charging leading-tight">8</div>
               <div class="text-[11px] text-vv-muted mt-0.5">Заряжается</div>
             </div>
           </div>
@@ -283,14 +283,14 @@
             onclick="setCellFilter('free')"
             class="px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0"
           >
-            Свободные (<span id="filter-count-free">40</span>)
+            Свободные (<span id="filter-count-free">42</span>)
           </button>
           <button
             id="filter-btn-busy"
             onclick="setCellFilter('busy')"
             class="px-3 py-1.5 rounded-full text-xs font-semibold bg-vv-card border border-vv-border text-vv-muted hover:text-vv-text transition shrink-0"
           >
-            Заняты (<span id="filter-count-busy">10</span>)
+            Заняты (<span id="filter-count-busy">8</span>)
           </button>
         </div>
 
@@ -548,7 +548,7 @@
 
     <!-- =================================================================== -->
     <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ (TAB BAR)                                   -->
-    <!-- ================================================================= -->
+    <!-- =================================================================== -->
     <nav class="shrink-0 bg-vv-card/95 backdrop-blur-md border-t border-vv-border px-3 py-2 grid grid-cols-2 gap-2 z-20">
       <button
         id="nav-btn-cells"
@@ -587,7 +587,7 @@
             </div>
             <div>
               <h3 id="sheet-cell-title" class="text-base font-extrabold text-vv-text">Ячейка #3 • Свободна</h3>
-              <p class="text-xs text-vv-muted">Макс. время зарядки: 1 ч 30 мин (5V)</p>
+              <p class="text-xs text-vv-muted">Макс. время зарядки: 1 ч 30 мин</p>
             </div>
           </div>
           <button onclick="closeBottomSheet('sheet-occupy-backdrop')" class="p-2 rounded-xl bg-vv-bg text-vv-muted hover:text-vv-text shrink-0">
@@ -613,7 +613,7 @@
         <!-- Контент шторки для НЕАВТОРИЗОВАННОГО пользователя -->
         <div id="sheet-occupy-guest-content" class="hidden space-y-3">
           <p class="text-xs text-vv-muted leading-relaxed">
-            Для бронирования ячейки, отслеживания уровня заряда и генерации одноразового кода получения выполните вход в личный кабинет.
+            Для бронирования ячейки, отслеживания времени зарядки и генерации одноразового кода получения выполните вход в личный кабинет.
           </p>
           <button
             onclick="goToCabinetLoginFromSheet()"
@@ -1351,9 +1351,8 @@
 
     function extractDisplayName(identifier) {
       const trimmed = String(identifier || '').trim();
-      if (trimmed.includes('@')) {
-        const local = trimmed.split('@')[0];
-        return local.endsWith('') ? local : trimmed;
+      if (trimmed.endsWith('@voltvolt.local')) {
+        return trimmed.split('@')[0] || 'Пользователь';
       }
       return trimmed || 'Пользователь';
     }
@@ -1888,7 +1887,18 @@
 
         mqttClient.on('message', (topic, message) => {
           const cleanTopic = String(topic || '').trim().toLowerCase();
-          const val = message.toString().trim();
+          let val = message.toString().trim();
+
+          // Поддержка как текстового формата (FREE / BOX FREE), так и JSON
+          if (val.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(val);
+              if (parsed.status !== undefined) val = String(parsed.status).trim();
+              else if (parsed.door !== undefined) val = String(parsed.door).trim();
+              else if (parsed.key !== undefined) val = String(parsed.key).trim();
+            } catch (e) {}
+          }
+
           const upperVal = val.toUpperCase();
 
           if (cleanTopic === MQTT_TOPICS.STATUS) {
