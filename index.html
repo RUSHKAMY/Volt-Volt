@@ -724,7 +724,8 @@
     const MQTT_TOPICS = {
       STATUS: 'locker_project/status',
       DOOR: 'locker_project/door',
-      KEY: 'locker_project/key'
+      KEY: 'locker_project/key',
+      CMD: 'locker_project/cmd'
     };
 
     let supabaseClient = null;
@@ -1281,8 +1282,9 @@
       if (cell.floor === 5 && cell.id === 1) {
         hwState.status = 'OPEN_TO_PUT';
         hwState.door = 'OPEN';
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN');
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'OPEN_TO_PUT');
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'OPEN', true);
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'OPEN_TO_PUT', true);
+        publishHardwareTopic(MQTT_TOPICS.CMD, 'OCCUPY', false);
       }
 
       closeBottomSheet('sheet-occupy-backdrop');
@@ -1305,8 +1307,9 @@
       if (cell.floor === 5 && cell.id === 1) {
         hwState.status = 'IN_USE';
         hwState.door = 'CLOSED';
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE');
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'IN_USE', true);
+        publishHardwareTopic(MQTT_TOPICS.CMD, 'CLOSE_DOOR', false);
       }
 
       saveCellsLocal();
@@ -1338,9 +1341,10 @@
         hwState.status = 'FREE';
         hwState.door = 'CLOSED';
         hwState.key = '-';
-        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
-        publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+        publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE', true);
+        publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
+        publishHardwareTopic(MQTT_TOPICS.KEY, '-', true);
+        publishHardwareTopic(MQTT_TOPICS.CMD, 'FREE', false);
       }
 
       saveCellsLocal();
@@ -1388,10 +1392,10 @@
       otp.code = null;
       otp.remainingSec = 0;
       otp.expired = false;
-
-      publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE');
-      publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED');
-      publishHardwareTopic(MQTT_TOPICS.KEY, '-');
+      publishHardwareTopic(MQTT_TOPICS.STATUS, 'FREE', true);
+      publishHardwareTopic(MQTT_TOPICS.DOOR, 'CLOSED', true);
+      publishHardwareTopic(MQTT_TOPICS.KEY, '-', true);
+      publishHardwareTopic(MQTT_TOPICS.CMD, 'FREE', false);
 
       saveCellsLocal();
       syncCellToSupabase(hwCell);
@@ -1914,7 +1918,8 @@
       cell.activeKey = code;
       if (cell.floor === 5 && cell.id === 1) {
         hwState.key = code;
-        publishHardwareTopic(MQTT_TOPICS.KEY, code);
+        publishHardwareTopic(MQTT_TOPICS.KEY, code, true);
+        publishHardwareTopic(MQTT_TOPICS.CMD, `KEY:${code}`, false);
       }
 
       saveCellsLocal();
@@ -1982,13 +1987,24 @@
     // -----------------------------------------------------------------------
     // 8. MQTT СИНХРОНИЗАЦИЯ ЯЧЕЙКИ #1 (5 ЭТАЖ 8 КОРПУСА) С HIVEMQ / ESP32
     // -----------------------------------------------------------------------
+    function subscribeHardwareTopics() {
+      if (!mqttClient || !mqttClient.connected) return;
+      const topics = [MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY];
+      try {
+        mqttClient.unsubscribe(topics, () => {
+          mqttClient.subscribe(topics, { qos: 0 });
+        });
+      } catch (e) {}
+    }
+
     function flushPendingMqttPublishes() {
       if (!mqttClient || !mqttClient.connected) return;
-      const topics = Object.keys(pendingMqttPublishes);
-      topics.forEach((topic) => {
+      const keys = Object.keys(pendingMqttPublishes);
+      keys.forEach((k) => {
+        const item = pendingMqttPublishes[k];
         try {
-          mqttClient.publish(topic, String(pendingMqttPublishes[topic]), { retain: true });
-          delete pendingMqttPublishes[topic];
+          mqttClient.publish(item.topic, String(item.payload), { retain: item.retain });
+          delete pendingMqttPublishes[k];
         } catch (e) {}
       });
     }
@@ -2005,13 +2021,13 @@
         mqttClient = window.mqtt.connect(MQTT_BROKER_URL, {
           clientId,
           clean: true,
-          keepalive: 25,
+          keepalive: 20,
           connectTimeout: 15000,
-          reconnectPeriod: 2000
+          reconnectPeriod: 1500
         });
 
         mqttClient.on('connect', () => {
-          mqttClient.subscribe(['locker_project/#', MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY]);
+          subscribeHardwareTopics();
           flushPendingMqttPublishes();
         });
 
@@ -2070,15 +2086,19 @@
       }
     }
 
-    function publishHardwareTopic(topic, payload) {
+    function publishHardwareTopic(topic, payload, retain = true) {
       const strPayload = String(payload);
       if (mqttClient && mqttClient.connected) {
         try {
-          mqttClient.publish(topic, strPayload, { retain: true });
+          mqttClient.publish(topic, strPayload, { retain });
           return;
         } catch (e) {}
       }
-      pendingMqttPublishes[topic] = strPayload;
+      pendingMqttPublishes[topic + '_' + (retain ? 'r' : 'c')] = {
+        topic,
+        payload: strPayload,
+        retain
+      };
     }
 
     function applyHardwareStateToCell(hwCell) {
@@ -2257,9 +2277,7 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && mqttClient) {
         if (mqttClient.connected) {
-          try {
-            mqttClient.subscribe(['locker_project/#', MQTT_TOPICS.STATUS, MQTT_TOPICS.DOOR, MQTT_TOPICS.KEY]);
-          } catch (e) {}
+          subscribeHardwareTopics();
         } else {
           try {
             mqttClient.reconnect();
